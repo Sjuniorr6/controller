@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-pclz3_zdo7svvdix*h*%h(1&ehfjb7rd-83u&k!eb=sg&a0y*j
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '10.0.0.153']
+ALLOWED_HOSTS = ['3.85.233.21', 'localhost', '10.0.0.153']
 
 
 LOGIN_REDIRECT_URL = "home"  # Para onde o usuário vai depois do login
