@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Resumo</h1>
+    <p>Esta é a página de resumo.</p>
+
+    <!-- Resumo dos Equipamentos -->
+    <div id="summary-container">
+        <h5 class="text-center mb-3">📊 Resumo dos Equipamentos</h5>
+        <table class="table table-bordered text-center">
+            <thead class="table-dark">
+                <tr>
+                    <th>🚚 Em Viagem</th>
+                    <th>📍 No Destino</th>
+                    <th>🏡 Na Fazenda</th>
+                    <th>🏢 Estoque Golden</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ count_viagem }}</td>
+                    <td>{{ count_destino }}</td>
+                    <td>{{ count_fazenda }}</td>
+                    <td>{{ count_golden }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

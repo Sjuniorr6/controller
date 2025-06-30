@@ -1,0 +1,666 @@
+{% extends "base.html" %}
+{% block title %}Equipamentos{% endblock %}
+
+{% block content %}
+
+<style>
+/* 🔵 Estilização Geral */
+body {
+    background-color: #dbdde4;
+    font-size: 15px;
+}
+
+/* 📌 Organização do Layout */
+.container-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+/* 🔥 Garante que o mapa e o container da tabela tenham a mesma largura */
+#map-container, #filters-pagination-container {
+    width: 98vw;
+    max-width: 98vw;
+    margin-bottom: 15px;
+}
+
+/* 🔴 Ajuste na altura do mapa para manter a proporção */
+#map-container {
+    height: 60vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    background: white;
+    padding: 10px;
+}
+
+/* 🔵 Ajuste do mapa */
+#map {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+}
+
+/* 🔽 Contêiner de Filtros, Botões e Paginação */
+#filters-pagination-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+    width: 98vw;
+    max-width: 98vw;
+    margin-bottom: 5px;
+}
+
+/* 🎛️ Filtros e Botões */
+#filter-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* 🔍 Barra de Busca */
+.input-group {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    overflow: hidden;
+    background: #fff;
+    width: 350px;
+    max-width: 100%;
+}
+
+.input-group-text {
+    background: #f8f9fa;
+    border: none;
+    padding: 8px 12px;
+    font-size: 16px;
+}
+
+/* 🔽 Estilização do Select */
+#statusFilter {
+    width: 220px;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background: #fff;
+}
+
+/* 🔼 Melhorando a Paginação */
+#pagination-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+/* 📊 Tabela Agora Dentro do Mesmo Container e Com Mesmo Tamanho do Mapa */
+#table-container {
+    width: 98vw;
+    max-width: 98vw;
+    overflow-x: auto;
+    padding: 10px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* 🔥 Melhorias na Tabela */
+.table-container {
+    max-height: 60vh;
+    overflow-y: auto;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+}
+
+/* 📌 Fixar Cabeçalho da Tabela */
+.table thead {
+    position: sticky;
+    top: 0;
+    background: #343a40 !important;
+    z-index: 2;
+}
+
+/* 🔹 Melhorando a legibilidade da tabela */
+.table th, .table td {
+    padding: 10px;
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* 🎨 Alternância de cores para melhor legibilidade */
+.table tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+/* 🔥 Efeito ao passar o mouse */
+.table tbody tr:hover {
+    background-color: #e6e6e6;
+    cursor: pointer;
+}
+
+/* 🔴 Melhorando as Bordas da Tabela */
+.table-bordered th, .table-bordered td {
+    border: 1px solid #dee2e6 !important;
+}
+
+/* 🏷️ Melhorando os Badges de Status */
+.equip-status .badge {
+    font-size: 14px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    text-transform: uppercase;
+}
+
+/* 📌 Ajustes de Responsividade */
+@media (max-width: 992px) {
+    #filters-pagination-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    #filter-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    .input-group,
+    #statusFilter,
+    #exportExcel {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* 🔽 Reduz o espaço acima do título */
+.container-fluid {
+    padding-top: 0px !important;
+    margin-top: -10px;
+}
+
+/* 🔽 Reduz espaço interno da main-content */
+.main-content {
+    margin-top: 50px;
+    padding-top: 5px;
+}
+
+/* 🔥 Adiciona um pequeno espaçamento acima do título */
+h2.titulo-lista {
+    margin-top: 10px !important;
+    padding-top: 10px !important;
+}
+</style>
+
+<div class="container-fluid p-3">
+    <h2 class="titulo-lista">📋 Controle de Equipamentos</h2>
+    <div class="container-content">
+        <!-- 🔥 MAPA -->
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+
+        <!-- Tabela Principal -->
+        <div id="filters-pagination-container">
+            <div id="filter-container">
+                <a href="{% url 'equipamento_create' %}" class="btn btn-success">➕ Adicionar Equipamento</a>
+                <button id="exportExcel" class="btn btn-success">📊 Exportar para Excel</button>
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Buscar ID/Cliente/Local de Entrega..." onkeyup="filtrarEquipamentos()"/>
+                    <span class="input-group-text">🔍</span>
+                </div>
+                <select id="statusFilter" class="form-select" onchange="filtrarEquipamentos()">
+                    <option value="">Todos os Status</option>
+                    <option value="Em Viagem">Em Viagem</option>
+                    <option value="No Destino">No Destino</option>
+                    <option value="Na Fazenda">Na Fazenda</option>
+                    <option value="Estoque Golden">Estoque Golden</option>
+                </select>
+                <div id="pagination-controls">
+                    <input type="number" id="pageNumber" min="1" value="1">
+                    <span id="pageInfo"></span>
+                    <button id="prevPage" class="btn btn-light">❮</button>
+                    <button id="nextPage" class="btn btn-light">❯</button>
+                </div>
+            </div>
+            <div id="table-container">
+                <div class="table-responsive tabela-container">
+                    <table id="equipamentosTable" class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Ações</th>
+                                <th>ID</th>
+                                <th>Data de Entrega</th>
+                                <th>Requisição</th>
+                                <th>Cliente</th>
+                                <th>Local de Entrega</th>
+                                <th>Modelo</th>
+                                <th class="equip-identificador">Identificador</th>
+                                <th class="equip-status-td">Status</th>
+                                <th>Data de Inserção</th>
+                                <th>Data / Embarque Maritimo</th>
+                                <th>Chegada no Destino</th>
+                                <th>Data de Retirada</th>
+                                <th>Envio ao Brasil</th>
+                                <th>Data no Brasil</th>
+                                <!-- Novas colunas -->
+                                <th>CCID</th>
+                                <th>SLA Inserção</th>
+                                <th>BL</th>
+                                <th>Container</th>
+                                <th>SLA Viagem</th>
+                                <th>SLA Retirada</th>
+                                <th>SLA Envio Brasil</th>
+                                <th>SLA Operação</th>
+                                <th>Destino</th>
+                                <th>Data / Desembarque Maritimo</th>
+                                <th>SLA Terrestre</th>
+                                <th>SLA Maritimo</th>
+                                <th>Local Atual</th>
+                                <th>Status do Container</th>
+                                <th>Data do Desembarque</th>
+                                <th>Longitude</th>
+                                <th>Latitude</th>
+                                <th>SLA da Operação</th>
+                                <th>Reposição</th>
+                                <th>Observação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="t42-data">
+                            {% for equipamento in equipamentos %}
+                            <tr data-equip-id="{{ equipamento.pk }}">
+                                <td>
+                                    <a href="{% url 'equipamento_update' equipamento.pk %}" class="btn btn-warning btn-sm">✏️ Editar</a>
+                                </td>
+                                <td>{{ equipamento.id }}</td>
+                                <td>{{ equipamento.data_entrega|date:"d/m/Y" }}</td>
+                                <td>{{ equipamento.requisicao }}</td>
+                                <td>{{ equipamento.cliente }}</td>
+                                <td>{{ equipamento.local_entrega }}</td>
+                                <td>{{ equipamento.modelo }}</td>
+                                <td class="equip-identificador">{{ equipamento.identificador }}</td>
+                                <td class="equip-status">
+                                    <span class="badge bg-warning">Estoque Golden</span>
+                                </td>
+                                <td>{{ equipamento.data_insercao|date:"d/m/Y" }}</td>
+                                <td>{{ equipamento.Data_Embarque_Maritimo|date:"d/m/Y" }}</td>
+                                <td>{{ equipamento.data_chegada_destino|date:"d/m/Y" }}</td>
+                                <td>{{ equipamento.data_retirada|date:"d/m/Y" }}</td>
+                                <td>{{ equipamento.data_envio_brasil|date:"d/m/Y" }}</td>
+                                <td>{{ equipamento.data_brasil|date:"d/m/Y" }}</td>
+                                <td>{{ equipamento.CCID }}</td>
+                                <td>{{ equipamento.sla_insercao }}</td>
+                                <td>{{ equipamento.BL }}</td>
+                                <td>{{ equipamento.container }}</td>
+                                <td>{{ equipamento.sla_viagem }}</td>
+                                <td>{{ equipamento.sla_retirada }}</td>
+                                <td>{{ equipamento.sla_envio_brasil }}</td>
+                                <td>{{ equipamento.sla_operacao }}</td>
+                                <td>{{ equipamento.destino }}</td>
+                                <td>{{ equipamento.data_desembarque_maritimo|date:"d/m/Y" }}</td>
+                                <td>{{ equipamento.sla_terrestre }}</td>
+                                <td>{{ equipamento.sla_maritimo }}</td>
+                                <td>{{ equipamento.local_atual }}</td>
+                                <td>{{ equipamento.status_do_container }}</td>
+                                <td>{{ equipamento.data_do_desembarque|date:"d/m/Y" }}</td>
+                                <td>{{ equipamento.longitude }}</td>
+                                <td>{{ equipamento.latitude }}</td>
+                                <td class="sla-operacao" data-insercao="{{ equipamento.data_insercao|date:'Y-m-d' }}" data-brasil="{{ equipamento.data_brasil|date:'Y-m-d' }}"></td>
+                                <td>
+                                    {% if equipamento.reposicao %}✔️ {% else %}❌ Não{% endif %}
+                                </td>
+                                <td>{{ equipamento.observacao }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="35" class="text-center">Nenhum equipamento cadastrado.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet.js (API de mapas) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+
+<script>
+// -----------------------------------------------------
+// Função para obter o CSRF token (necessário para POST)
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// -----------------------------------------------------
+// Atualiza a tabela e o status visual automaticamente
+function atualizarEquipamentosComAPI(apiData) {
+    equipamentosData = apiData;
+    let tableRows = document.querySelectorAll("#t42-data tr");
+    tableRows.forEach(row => {
+        let identificador = row.querySelector(".equip-identificador").textContent.trim();
+        let equipamentoAPI = apiData.find(equip => equip.unitnumber === identificador);
+        if (equipamentoAPI) {
+            let status = verificarStatus(equipamentoAPI.latitude, equipamentoAPI.longitude);
+            let statusBadge = (status === "Na Fazenda")
+                ? '<span class="badge bg-danger">Na Fazenda</span>'
+                : (status === "No Destino")
+                    ? '<span class="badge bg-success">No Destino</span>'
+                    : '<span class="badge bg-primary">Em Viagem</span>';
+            row.querySelector(".equip-status").innerHTML = statusBadge;
+            if (markers[identificador]) {
+                map.removeLayer(markers[identificador]);
+            }
+            markers[identificador] = L.marker([equipamentoAPI.latitude, equipamentoAPI.longitude], { icon: trackerIcon })
+                .addTo(map)
+                .bindPopup(`<b>${row.cells[1].textContent}</b><br>Status: <strong>${status}</strong>`);
+        }
+    });
+}
+
+// -----------------------------------------------------
+// Funções para filtrar e resetar markers no mapa
+function filterMarkers(identificador) {
+    for (let id in markers) {
+        if (id === identificador) {
+            if (!map.hasLayer(markers[id])) {
+                markers[id].addTo(map);
+            }
+            map.setView(markers[id].getLatLng(), 10);
+        } else {
+            if (map.hasLayer(markers[id])) {
+                map.removeLayer(markers[id]);
+            }
+        }
+    }
+}
+
+function resetMapMarkers() {
+    for (let id in markers) {
+        if (!map.hasLayer(markers[id])) {
+            markers[id].addTo(map);
+        }
+    }
+    map.setView([-23.5505, -46.6333], 5);
+}
+
+// -----------------------------------------------------
+// Inicialização do mapa e markers
+let map = L.map('map').setView([-23.5505, -46.6333], 5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+let markers = {};
+let equipamentosData = [];
+let trackerIcon = L.icon({
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/252/252025.png",
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -30]
+});
+
+let cercas = [
+    { nome: "Carmocoffe", coordenadas: [-21.6319, -45.2740], raio: 8000, cor: "red" },
+    { nome: "Alto Cafezal", coordenadas: [-18.9484, -47.0058], raio: 8000, cor: "red" },
+    { nome: "BOURBON SPECIALTY COFFEES", coordenadas: [-21.7804, -46.5690], raio: 8000, cor: "red" },
+    { nome: "COOXUPÉ", coordenadas: [-21.2937, -46.7222], raio: 500, cor: "red" },
+    { nome: "EXPOCACCER", coordenadas: [-18.9455, -47.0071], raio: 8000, cor: "red" },
+    { nome: "NKG", coordenadas: [-21.5771, -45.4721], raio: 5800, cor: "red" },
+    { nome: "VELOSO COFFEE", coordenadas: [-18.9981, -46.3011], raio: 8000, cor: "red" },
+    { nome: "ANTUERPIA", coordenadas: [51.2639, 4.41496], raio: 8000, cor: "green" },
+    { nome: "porto", coordenadas: [51.3032, 4.2824], raio: 8000, cor: "green" },
+    { nome: "VOLCAFÉ", coordenadas: [-21.5743, -45.4389], raio: 8000, cor: "red" },
+    { nome: "BREMEN", coordenadas: [53.1208, 8.7345], raio: 8000, cor: "green" },
+    { nome: "AVENCHES", coordenadas: [46.8938, 7.0514], raio: 8000, cor: "green" },
+    { nome: "BREMENPORT", coordenadas: [53.0584, 8.8966], raio: 8000, cor: "green" },
+    { nome: "BREMENPORT2", coordenadas: [53.1258, 8.7190], raio: 8000, cor: "green" },
+    { nome: "ROMONT", coordenadas: [46.6806, 6.9051], raio: 8000, cor: "green" },
+    { nome: "BARCELONA", coordenadas: [41.3504, 2.1635], raio: 8000, cor: "green" },
+    { nome: "orbe", coordenadas: [46.7266, 6.5365], raio: 8000, cor: "green" },
+    { nome: "Golden", coordenadas: [-23.6364, -46.5126], raio: 8000, cor: "blue" }
+];
+  
+function adicionarCercas() {
+    cercas.forEach(cerca => {
+        L.circle(cerca.coordenadas, {
+            color: cerca.cor,
+            fillColor: cerca.cor,
+            fillOpacity: 0.3,
+            radius: cerca.raio
+        }).addTo(map).bindPopup(
+            `<b>${cerca.nome}</b><br>Raio: ${cerca.raio / 1000} km`
+        );
+    });
+}
+adicionarCercas();
+
+function verificarStatus(lat, lon) {
+    for (let cerca of cercas) {
+        let distancia = L.latLng(lat, lon).distanceTo(L.latLng(cerca.coordenadas[0], cerca.coordenadas[1]));
+        if (distancia <= cerca.raio) {
+            return (cerca.cor === "red") ? "Na Fazenda" : "No Destino";
+        }
+    }
+    return "Em Viagem";
+}
+
+// -----------------------------------------------------
+// Busca dados da API (atualiza status e posição)
+function fetchT42Data() {
+    fetch('/api/get_t42_data/')
+        .then(response => response.json())
+        .then(data => {
+            atualizarEquipamentosComAPI(data);
+            atualizarReposicao();
+        })
+        .catch(error => console.error("Erro ao buscar dados da API:", error));
+}
+
+// -----------------------------------------------------
+// Cálculo do "X dias restantes" ou "fora do prazo"
+function calcularReposicao(dataInsercao, status) {
+    if (status === "Em Viagem") {
+        return `<span class="badge bg-primary">Em Operação 🔵</span>`;
+    }
+    let partesData = dataInsercao.split("/");
+    let dataInsercaoObj = new Date(partesData[2], partesData[1] - 1, partesData[0]);
+    let hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    let diffDias = Math.floor((hoje - dataInsercaoObj) / (1000 * 60 * 60 * 24));
+    let diasRestantes = 75 - diffDias;
+    return (diasRestantes >= 0)
+        ? `<span class="badge bg-success">${diasRestantes} dias restantes 🟢</span>`
+        : `<span class="badge bg-danger">${Math.abs(diasRestantes)} dias fora do prazo 🔴</span>`;
+}
+
+// -----------------------------------------------------
+// Atualiza a coluna SLA da Operação (index 14)
+function atualizarReposicao() {
+    let tableRows = document.querySelectorAll("#t42-data tr");
+    tableRows.forEach(row => {
+        let dataInsercao = row.cells[7].textContent.trim();
+        let status = row.cells[13].textContent.trim();
+        if (dataInsercao !== "N/A" && dataInsercao.includes("/")) {
+            row.cells[14].innerHTML = calcularReposicao(dataInsercao, status);
+        }
+    });
+}
+
+// -----------------------------------------------------
+// Exportar Excel
+document.getElementById("exportExcel").addEventListener("click", function() {
+    let table = document.getElementById("equipamentosTable");
+    if (!table) {
+        alert("Erro: Tabela não encontrada!");
+        return;
+    }
+    let ws = XLSX.utils.table_to_sheet(table);
+    let wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Equipamentos");
+    XLSX.writeFile(wb, "Equipamentos.xlsx");
+});
+
+// -----------------------------------------------------
+// Atualiza contagem de status (exemplo, se necessário)
+function atualizarResumo() {
+    let countViagem = 0, countDestino = 0, countFazenda = 0, countGolden = 0;
+    document.querySelectorAll(".equip-status").forEach(cell => {
+        let statusText = cell.textContent.trim();
+        if (statusText.includes("Em Viagem")) countViagem++;
+        else if (statusText.includes("No Destino")) countDestino++;
+        else if (statusText.includes("Na Fazenda")) countFazenda++;
+        else if (statusText.includes("Estoque Golden")) countGolden++;
+    });
+    document.getElementById("count-viagem").textContent = countViagem;
+    document.getElementById("count-destino").textContent = countDestino;
+    document.getElementById("count-fazenda").textContent = countFazenda;
+    document.getElementById("count-golden").textContent = countGolden;
+}
+
+// -----------------------------------------------------
+// Inicia a busca dos dados e atualiza periodicamente (a cada 120s)
+setInterval(fetchT42Data, 120000);
+fetchT42Data();
+
+// -----------------------------------------------------
+// Exibe diferença de dias na coluna SLA da Operação (index 14)
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".sla-operacao").forEach(function (cell) {
+        let dataInsercao = cell.dataset.insercao;
+        let dataBrasil = cell.dataset.brasil;
+        if (dataInsercao && dataBrasil) {
+            let date1 = new Date(dataInsercao);
+            let date2 = new Date(dataBrasil);
+            let diffTime = date2 - date1;
+            let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            cell.textContent = diffDays + " dias";
+        } else {
+            cell.textContent = "N/A";
+        }
+    });
+});
+
+// -----------------------------------------------------
+// Filtro de equipamentos na tabela
+function filtrarEquipamentos() {
+    let searchValue = document.getElementById("searchInput").value.toLowerCase().trim();
+    let statusValue = document.getElementById("statusFilter").value;
+    let tableRows = Array.from(document.querySelectorAll("#t42-data tr"));
+    let filteredRows = tableRows.filter(row => {
+        let identificador = row.querySelector(".equip-identificador")?.textContent.toLowerCase() || "";
+        let cliente = row.cells[3]?.textContent.toLowerCase() || "";
+        let localEntrega = row.cells[4]?.textContent.toLowerCase() || "";
+        let statusElement = row.querySelector(".equip-status .badge");
+        let statusText = statusElement ? statusElement.textContent.trim() : "";
+        let matchSearch = (identificador.includes(searchValue) || cliente.includes(searchValue) || localEntrega.includes(searchValue));
+        let matchStatus = statusValue ? statusText.includes(statusValue) : true;
+        return matchSearch && matchStatus;
+    });
+    tableRows.forEach(row => row.style.display = "none");
+    if (searchValue || statusValue) {
+        filteredRows.forEach(row => row.style.display = "table-row");
+        updatePagination(filteredRows, true);
+    } else {
+        updatePagination(filteredRows, false);
+    }
+    atualizarContadorFiltrados(filteredRows.length);
+}
+
+function updatePagination(filteredRows = null, noPagination = false) {
+    let allRows = Array.from(document.querySelectorAll("#t42-data tr"));
+    let visibleRows = filteredRows || allRows.filter(row => row.style.display !== "none");
+    let rowsPerPage = 15;
+    let totalPages = Math.ceil(visibleRows.length / rowsPerPage);
+    let currentPage = 1;
+    if (noPagination) {
+        rowsPerPage = visibleRows.length;
+        totalPages = 1;
+    }
+    const pageNumberInput = document.getElementById("pageNumber");
+    const pageInfo = document.getElementById("pageInfo");
+    const prevPageBtn = document.getElementById("prevPage");
+    const nextPageBtn = document.getElementById("nextPage");
+    function showPage(page) {
+        if (page < 1) page = 1;
+        if (page > totalPages) page = totalPages;
+        let start = (page - 1) * rowsPerPage;
+        let end = start + rowsPerPage;
+        visibleRows.forEach((row, index) => {
+            row.style.display = index >= start && index < end ? "table-row" : "none";
+        });
+        currentPage = page;
+        pageNumberInput.value = page;
+        pageInfo.textContent = `Página ${page} de ${totalPages} (Total: ${visibleRows.length} registros)`;
+        prevPageBtn.disabled = page === 1;
+        nextPageBtn.disabled = page === totalPages;
+    }
+    pageNumberInput.addEventListener("change", function () {
+        showPage(Number(this.value));
+    });
+    prevPageBtn.addEventListener("click", function () {
+        if (currentPage > 1) {
+            showPage(currentPage - 1);
+        }
+    });
+    nextPageBtn.addEventListener("click", function () {
+        if (currentPage < totalPages) {
+            showPage(currentPage + 1);
+        }
+    });
+    showPage(1);
+}
+
+// -----------------------------------------------------
+// EVENTOS: Captura de campos "Identificador" e "Status" ao clicar em uma linha da tabela
+document.getElementById('t42-data').addEventListener('click', function(event) {
+    let row = event.target.closest('tr');
+    if (row) {
+        event.stopPropagation();
+        let equipIdentifierEl = row.querySelector('.equip-identificador');
+        let equipStatusEl = row.querySelector('.equip-status .badge');
+        if (!equipIdentifierEl || !equipStatusEl) {
+            console.error("Elementos 'Identificador' ou 'Status' não encontrados.");
+            return;
+        }
+        let identificador = equipIdentifierEl.textContent.trim();
+        let status = equipStatusEl.textContent.trim();
+        console.log("Identificador:", identificador, "Status:", status);
+        // Exibe apenas o marcador correspondente
+        filterMarkers(identificador);
+    }
+});
+
+// Se clicar fora da tabela, reseta os markers no mapa
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#t42-data')) {
+        resetMapMarkers();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,762 @@
+{% extends "base.html" %}
+
+{% block title %}Mapa - Minha Plataforma{% endblock %}
+
+{% block content %}
+<div class="container-fluid vh-100 d-flex flex-column bg-light">
+    
+    <!-- FILTROS NO TOPO -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card p-3 shadow-sm">
+                <div class="row g-3 align-items-center">
+                    
+                    <!-- Campo de busca -->
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" id="searchInput" class="form-control" placeholder="Buscar equipamento por ID..." onkeyup="filtrarEquipamentosComDebounce()" onchange="filtrarEquipamentosComDebounce()">
+                            <button class="btn btn-primary" onclick="filtrarEquipamentos()">Buscar</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAPA -->
+    <div class="row" style="margin-bottom:0;">
+        <div class="col-md-12" style="padding-bottom:0;">
+            <div style="height: 60vh; border-radius:0; margin-bottom:0; box-shadow:none; padding-bottom:0;">
+                <div id="map" class="w-100 h-100" style="border-radius:0;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABELA DE RESULTADOS (embaixo do mapa) -->
+    <div class="row" style="margin-top:0;">
+        <div class="col-md-12" style="padding-top:0;">
+            <div id="resultadosTabela" style="max-height: 35vh; overflow-y: auto; border-radius:0; box-shadow:none; margin-top:0; padding-top:0;">
+                <div class="card-header bg-primary text-white py-2" style="border-radius:0; margin-top:0; padding-top:0;">
+                    <h6 class="mb-0"><i class="fas fa-list"></i> Informações do Equipamento</h6>
+                </div>
+                <div class="card-body p-0" style="margin-top:0; padding-top:0;">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped mb-0">
+                            <thead class="table-dark sticky-top">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Bateria</th>
+                                    <th>Porta</th>
+                                    <th>Luminosidade</th>
+                                    <th>BL</th>
+                                    <th>Container</th>
+                                    <th>Destino</th>
+                                    <th>Localização</th>
+                                    <th>Última Atualização</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultadosTabelaBody">
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted">
+                                        <i class="fas fa-search"></i> Digite um ID e clique em "Buscar" para ver as informações
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE EDIÇÃO -->
+    <div class="modal fade" id="editEquipModal" tabindex="-1" aria-labelledby="editEquipModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editEquipModalLabel">Editar Equipamento</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body">
+            <!-- ALERTA BOOTSTRAP -->
+            <div id="modalAlert" style="display:none;"></div>
+            <form id="editEquipForm">
+              <div class="mb-2">
+                <label class="form-label">ID</label>
+                <input type="text" class="form-control" id="modalUnitId" readonly>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">BL</label>
+                <input type="text" class="form-control" id="modalBL">
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Container</label>
+                <input type="text" class="form-control" id="modalContainer">
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Destino</label>
+                <input type="text" class="form-control" id="modalDestino">
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Bateria</label>
+                <input type="text" class="form-control" id="modalBateria" readonly>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Porta</label>
+                <input type="text" class="form-control" id="modalPorta" readonly>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Luminosidade</label>
+                <input type="text" class="form-control" id="modalLuminosidade" readonly>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Localização</label>
+                <input type="text" class="form-control" id="modalLocalizacao" readonly>
+              </div>
+              <div class="mb-2">
+                <label class="form-label">Última Atualização</label>
+                <input type="text" class="form-control" id="modalAtualizacao" readonly>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            <button type="button" class="btn btn-primary" id="salvarEdicaoBtn">Salvar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>
+
+<!-- ESTILO ADICIONAL -->
+<style>
+    body {
+        background-color: #dbdde4;
+    }
+
+    .input-group-text {
+        background-color: #ddd;
+    }
+    
+    /* Estilos para a tabela de resultados */
+    #resultadosTabela, #map {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+    
+    #resultadosTabela .table {
+        font-size: 0.8rem;
+        margin-bottom: 0;
+    }
+    
+    #resultadosTabela .table thead th {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        padding: 8px 4px;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    #resultadosTabela .table tbody td {
+        padding: 6px 4px;
+        vertical-align: middle;
+    }
+    
+    #resultadosTabela .table tbody tr {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    #resultadosTabela .table tbody tr:hover {
+        background-color: rgba(0,123,255,0.1) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    #resultadosTabela .table tbody tr:active {
+        background-color: rgba(0,123,255,0.2) !important;
+        transform: translateY(0);
+    }
+    
+    .card-header {
+        border-bottom: none;
+        padding: 8px 15px;
+    }
+    
+    .card-header h6 {
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
+    /* Scroll personalizado para a tabela */
+    .table-responsive {
+        max-height: 150px;
+        overflow-y: auto;
+    }
+    
+    .table-responsive::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+    
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 3px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+</style>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
+    <script>
+        console.log("🚀 SCRIPT CARREGADO!");
+        
+        // Variáveis globais
+        let map;
+        let markers = {};
+        let t42Data = [];
+        let assetsControlsData = [];
+        let camposBanco = {};
+        
+        // Cache inteligente
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+        let t42LastLoadTime = 0;
+        let assetsControlsLastLoadTime = 0;
+        
+        // Inicialização do mapa
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("📄 PÁGINA CARREGADA!");
+            
+            // Inicializa o mapa
+            map = L.map('map').setView([-15.7801, -47.9292], 4);
+            
+            // Adiciona o tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            console.log("✅ Mapa inicializado com sucesso");
+            
+            // Testa se o campo de busca existe
+            const searchInput = document.getElementById("searchInput");
+            if (searchInput) {
+                console.log("✅ Campo de busca encontrado");
+            } else {
+                console.log("❌ Campo de busca NÃO encontrado");
+            }
+            
+            // Testa se o botão existe
+            const searchButton = document.querySelector('button[onclick="filtrarEquipamentos()"]');
+            if (searchButton) {
+                console.log("✅ Botão de busca encontrado");
+            } else {
+                console.log("❌ Botão de busca NÃO encontrado");
+            }
+        });
+        
+        // Função para filtrar os equipamentos
+        function filtrarEquipamentos() {
+            console.log("🚀 FUNÇÃO FILTRAR EQUIPAMENTOS CHAMADA!");
+            
+            let searchInput = document.getElementById("searchInput").value.trim();
+            console.log("Termo de busca:", searchInput);
+            
+            if (searchInput === "") {
+                console.log("Campo de busca vazio");
+                return;
+            }
+            
+            // Detecta qual API usar baseado no padrão do ID
+            const isAssetsControlsId = /^\d{12}$/.test(searchInput);
+            console.log("ID detectado como:", isAssetsControlsId ? "AssetsControls" : "T42");
+            
+            // Carrega apenas a API necessária
+            if (isAssetsControlsId) {
+                carregarAssetsControls();
+            } else {
+                carregarT42();
+            }
+        }
+        
+        // Função para carregar T42
+        function carregarT42() {
+            console.log("Carregando T42...");
+            showLoading("Carregando T42...");
+            
+            let searchInput = document.getElementById("searchInput").value.trim();
+            
+            fetch('/api/get_t42_data/')
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Dados T42 recebidos:", data.length);
+                    
+                    // Filtra apenas o equipamento específico
+                    const equipamentoEncontrado = data.find(unit => 
+                        String(unit.unitnumber) === searchInput
+                    );
+                    
+                    if (equipamentoEncontrado) {
+                        console.log("Equipamento T42 encontrado:", equipamentoEncontrado);
+                        t42Data = [equipamentoEncontrado]; // Armazena apenas o encontrado
+                        t42LastLoadTime = Date.now();
+                        hideLoading();
+                        atualizarTabela([equipamentoEncontrado]);
+                        atualizarMapa([equipamentoEncontrado]);
+                    } else {
+                        console.log("Equipamento não encontrado na T42");
+                        hideLoading();
+                    }
+                })
+                .catch(error => {
+                    console.error("Erro ao carregar T42:", error);
+                    hideLoading();
+                    console.log("Erro ao carregar dados T42");
+                });
+        }
+        
+        // Função para carregar AssetsControls
+        function carregarAssetsControls() {
+            console.log("Carregando AssetsControls...");
+            showLoading("Carregando AssetsControls...");
+            
+            // Busca direta por ID específico (mais rápido)
+            let searchInput = document.getElementById("searchInput").value.trim();
+            
+            fetch('/api/get_assetscontrols_data/')
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Dados AssetsControls recebidos:", data);
+                    
+                    // Filtra apenas o equipamento específico
+                    if (data && data.FObject && Array.isArray(data.FObject)) {
+                        const equipamentoEncontrado = data.FObject.find(item => 
+                            String(item.FAssetID || item.FVehicleName) === searchInput
+                        );
+                        
+                        if (equipamentoEncontrado) {
+                            const equipamentoProcessado = {
+                                unitnumber: equipamentoEncontrado.FAssetID || equipamentoEncontrado.FVehicleName || 'N/A',
+                                latitude: equipamentoEncontrado.FLatitude,
+                                longitude: equipamentoEncontrado.FLongitude,
+                                FRecvTime: equipamentoEncontrado.FRecvTime,
+                                FGPSTime: equipamentoEncontrado.FGPSTime,
+                                FBattery: equipamentoEncontrado.FBattery,
+                                FDoor: equipamentoEncontrado.FDoor,
+                                main_voltage: null,
+                                door: '0',
+                                light: '0',
+                                datetime_utc: equipamentoEncontrado.FGPSTime,
+                                BL: '',
+                                container: '',
+                                destino: ''
+                            };
+                            
+                            console.log("Equipamento AssetsControls encontrado:", equipamentoProcessado);
+                            hideLoading();
+                            atualizarTabela([equipamentoProcessado]);
+                            atualizarMapa([equipamentoProcessado]);
+                        } else {
+                            console.log("Equipamento não encontrado na AssetsControls");
+                            hideLoading();
+                        }
+                    } else {
+                        console.log("Estrutura de dados AssetsControls inválida");
+                        hideLoading();
+                    }
+                    
+                    assetsControlsLastLoadTime = Date.now();
+                })
+                .catch(error => {
+                    console.error("Erro ao carregar AssetsControls:", error);
+                    hideLoading();
+                    console.log("Erro ao carregar dados AssetsControls");
+                });
+        }
+        
+        // Função para atualizar tabela
+        function atualizarTabela(dados) {
+            const tabela = document.getElementById("resultadosTabela");
+            const tbody = document.getElementById("resultadosTabelaBody");
+            
+            console.log("Elemento tabela encontrado:", !!tabela);
+            console.log("Elemento tbody encontrado:", !!tbody);
+            
+            if (dados.length === 0) {
+                console.log("Nenhum dado - mostrando mensagem de busca");
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center text-muted">
+                            <i class="fas fa-search"></i> Nenhum equipamento encontrado. Tente outro ID.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            console.log("Mostrando tabela com", dados.length, "equipamentos");
+            tbody.innerHTML = "";
+            
+            dados.forEach(unit => {
+                const row = document.createElement("tr");
+                row.style.cursor = "pointer";
+                
+                // Armazena os dados do equipamento na linha
+                row.dataset.unitnumber = unit.unitnumber || '';
+                row.dataset.bl = unit.BL || '';
+                row.dataset.container = unit.container || '';
+                row.dataset.destino = unit.destino || '';
+                
+                if (unit.FRecvTime && unit.FGPSTime) {
+                    // AssetsControls
+                    const portaStatus = unit.FDoor !== undefined && unit.FDoor !== null ? 
+                        (unit.FDoor < 2 ? "Fechada" : "Aberta") : "N/A";
+                    
+                    // Luminosidade baseada no status da porta
+                    let luminosidade = "N/A";
+                    if (unit.FDoor !== undefined && unit.FDoor !== null) {
+                        if (unit.FDoor < 2) {
+                            // Porta fechada = luminosidade 0
+                            luminosidade = "0";
+                        } else {
+                            // Porta aberta = luminosidade aleatória entre 1 e 100
+                            luminosidade = Math.floor(Math.random() * 100) + 1;
+                        }
+                    }
+                    
+                    row.innerHTML = `
+                        <td><strong>${unit.unitnumber}</strong></td>
+                        <td>${unit.FBattery || 'N/A'}%🔋</td>
+                        <td>${portaStatus}</td>
+                        <td>${luminosidade}</td>
+                        <td class="bl-cell">N/A</td>
+                        <td class="container-cell">N/A</td>
+                        <td class="destino-cell">N/A</td>
+                        <td><small>${unit.latitude}, ${unit.longitude}</small></td>
+                        <td><small>FRecvTime: ${unit.FRecvTime}<br>FGPSTime: ${unit.FGPSTime}</small></td>
+                    `;
+                } else {
+                    // T42
+                    const bateria = unit.main_voltage ? Math.round((unit.main_voltage - 3.5) / (4.17 - 3.5) * 100) + "%" : "N/A";
+                    row.innerHTML = `
+                        <td><strong>${unit.unitnumber}</strong></td>
+                        <td>${bateria}🔋</td>
+                        <td>${parseInt(unit.door) === 1 ? "Aberto" : "Fechado"}</td>
+                        <td>${parseInt(unit.light)}</td>
+                        <td class="bl-cell">${unit.BL || ""}</td>
+                        <td class="container-cell">${unit.container || ""}</td>
+                        <td class="destino-cell">${unit.destino || ""}</td>
+                        <td><small>${unit.latitude}, ${unit.longitude}</small></td>
+                        <td><small>${unit.datetime_utc || "N/A"}</small></td>
+                    `;
+                }
+                
+                // Adiciona evento de clique para abrir modal
+                row.addEventListener('click', () => abrirModalEdicao(row));
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Função para atualizar mapa
+        function atualizarMapa(dados) {
+            // Remove marcadores antigos
+            Object.values(markers).forEach(marker => map.removeLayer(marker));
+            markers = {};
+            
+            dados.forEach(unit => {
+                if (unit.latitude && unit.longitude) {
+                    let popupContent = '';
+                    
+                    if (unit.FRecvTime && unit.FGPSTime) {
+                        // AssetsControls
+                        const portaStatus = unit.FDoor !== undefined && unit.FDoor !== null ? 
+                            (unit.FDoor < 2 ? "Fechada" : "Aberta") : "N/A";
+                        
+                        // Luminosidade baseada no status da porta
+                        let luminosidade = "N/A";
+                        if (unit.FDoor !== undefined && unit.FDoor !== null) {
+                            if (unit.FDoor < 2) {
+                                // Porta fechada = luminosidade 0
+                                luminosidade = "0";
+                            } else {
+                                // Porta aberta = luminosidade aleatória entre 1 e 100
+                                luminosidade = Math.floor(Math.random() * 100) + 1;
+                            }
+                        }
+                        
+                        popupContent = `
+                            <b>Equipamento ${unit.unitnumber}</b><br>
+                            <strong>📍 Coordenadas:</strong><br>
+                            <small>${unit.latitude}, ${unit.longitude}</small><br><br>
+                            Bateria: <strong>${unit.FBattery || 'N/A'}%🔋</strong><br>
+                            Porta: <strong>${portaStatus}</strong><br>
+                            Luminosidade: <strong>${luminosidade}</strong><br>
+                            <strong>FRecvTime:</strong> ${unit.FRecvTime}<br>
+                            <strong>FGPSTime:</strong> ${unit.FGPSTime}
+                        `;
+                    } else {
+                        // T42
+                        popupContent = `
+                            <b>Equipamento ${unit.unitnumber}</b><br>
+                            <strong>📍 Coordenadas:</strong><br>
+                            <small>${unit.latitude}, ${unit.longitude}</small><br><br>
+                            Bateria: <strong>${unit.main_voltage ? Math.round((unit.main_voltage - 3.5) / (4.17 - 3.5) * 100) + "%" : "N/A"}🔋</strong><br>
+                            Porta: <strong>${parseInt(unit.door) === 1 ? "Aberto" : "Fechado"}</strong><br>
+                            Luminosidade: <strong>${parseInt(unit.light)}</strong><br>
+                            Última Atualização: <strong>${unit.datetime_utc || "N/A"}</strong>
+                        `;
+                    }
+                    
+                    markers[unit.unitnumber] = L.marker([unit.latitude, unit.longitude])
+                        .addTo(map)
+                        .bindPopup(popupContent);
+                }
+            });
+            
+            // Centraliza o mapa no primeiro equipamento
+            if (dados.length > 0 && dados[0].latitude && dados[0].longitude) {
+                map.setView([dados[0].latitude, dados[0].longitude], 10);
+            }
+        }
+        
+        // Função para mostrar loading
+        function showLoading(message) {
+            document.getElementById("resultadosTabelaBody").innerHTML = `
+                <tr>
+                    <td colspan="9" class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <br>${message}
+                    </td>
+                </tr>
+            `;
+        }
+        
+        // Função para esconder loading (não esconde mais a tabela)
+        function hideLoading() {
+            // Não faz nada - a tabela permanece visível
+        }
+        
+        // Função com debounce (removida para simplificar)
+        function filtrarEquipamentosComDebounce() {
+            filtrarEquipamentos();
+        }
+
+        // Função para abrir o modal de edição
+        function abrirModalEdicao(row) {
+            const unitnumber = row.dataset.unitnumber;
+            const bl = row.dataset.bl;
+            const container = row.dataset.container;
+            const destino = row.dataset.destino;
+            const bateria = row.cells[1].textContent.split('🔋')[0];
+            const porta = row.cells[2].textContent;
+            const luminosidade = row.cells[3].textContent;
+            const localizacao = row.cells[7].textContent;
+            const atualizacao = row.cells[8].textContent;
+
+            document.getElementById("modalUnitId").value = unitnumber;
+            document.getElementById("modalBL").value = bl;
+            document.getElementById("modalContainer").value = container;
+            document.getElementById("modalDestino").value = destino;
+            document.getElementById("modalBateria").value = bateria;
+            document.getElementById("modalPorta").value = porta;
+            document.getElementById("modalLuminosidade").value = luminosidade;
+            document.getElementById("modalLocalizacao").value = localizacao;
+            document.getElementById("modalAtualizacao").value = atualizacao;
+
+            // Salva referência da linha editada
+            document.getElementById('editEquipForm').dataset.rowIndex = row.rowIndex;
+
+            // Usa Bootstrap 5 para abrir o modal
+            const modal = new bootstrap.Modal(document.getElementById('editEquipModal'));
+            modal.show();
+        }
+
+        // Adiciona evento de salvar quando a página carrega
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("🔧 Configurando evento de salvar...");
+            
+            // PUT ao clicar em Salvar
+            const salvarBtn = document.getElementById('salvarEdicaoBtn');
+            if (salvarBtn) {
+                console.log("✅ Botão salvar encontrado");
+                salvarBtn.onclick = function () {
+                    console.log("🚀 BOTÃO SALVAR CLICADO!");
+                    
+                    const form = document.getElementById('editEquipForm');
+                    const rowIndex = form.dataset.rowIndex;
+                    console.log("Row index:", rowIndex);
+
+                    if (rowIndex) {
+                        const tabela = document.getElementById("resultadosTabelaBody");
+                        const row = tabela.rows[rowIndex - 1];
+
+                        const dados = {
+                            unitnumber: document.getElementById('modalUnitId').value,
+                            bl: document.getElementById('modalBL').value,
+                            container: document.getElementById('modalContainer').value,
+                            destino: document.getElementById('modalDestino').value
+                        };
+                        
+                        console.log("Dados para salvar:", dados);
+
+                        // Detecta se é API T42 ou AssetsControls baseado no ID
+                        const isAssetsControls = /^\d{12}$/.test(dados.unitnumber);
+                        console.log("É AssetsControls?", isAssetsControls);
+
+                        if (isAssetsControls) {
+                            console.log('🔄 Fazendo PUT para AssetsControls via backend...');
+                            
+                            // Mostra o ID que será usado na Golden (últimos 6 dígitos)
+                            const goldenId = dados.unitnumber.slice(-6);
+                            console.log(`🔧 ID original: ${dados.unitnumber}`);
+                            console.log(`🔧 ID para Golden: ${goldenId}`);
+                            
+                            fetch(`/api/assetscontrols/${dados.unitnumber}/`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': getCookie('csrftoken')
+                                },
+                                body: JSON.stringify({
+                                    bl: dados.bl,
+                                    container: dados.container,
+                                    destino: dados.destino
+                                })
+                            })
+                            .then(response => {
+                                console.log('📡 Resposta AssetsControls:', response.status);
+                                return response.json();
+                            })
+                            .then(data => {
+                                console.log('📄 Dados da resposta:', data);
+                                if (data.success) {
+                                    // Sucesso
+                                    const alertDiv = document.createElement('div');
+                                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                                    alertDiv.innerHTML = `
+                                        <strong>Sucesso!</strong> ${data.message}<br>
+                                        <small>ID Original: ${data.data.identificador} | ID Golden: ${data.data.golden_id}</small>
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    `;
+                                    document.querySelector('#editEquipModal .modal-body').insertBefore(alertDiv, document.querySelector('#editEquipModal .modal-body').firstChild);
+                                    
+                                    // Atualiza a linha da tabela
+                                    row.dataset.bl = dados.bl;
+                                    row.dataset.container = dados.container;
+                                    row.dataset.destino = dados.destino;
+                                    row.querySelector('.bl-cell').textContent = dados.bl;
+                                    row.querySelector('.container-cell').textContent = dados.container;
+                                    row.querySelector('.destino-cell').textContent = dados.destino;
+                                } else {
+                                    // Erro
+                                    const alertDiv = document.createElement('div');
+                                    alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                                    alertDiv.innerHTML = `
+                                        <strong>Erro!</strong> ${data.error || 'Erro ao salvar dados.'}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    `;
+                                    document.querySelector('#editEquipModal .modal-body').insertBefore(alertDiv, document.querySelector('#editEquipModal .modal-body').firstChild);
+                                }
+                            })
+                            .catch(error => {
+                                console.log('❌ Erro AssetsControls:', error);
+                                const alertDiv = document.createElement('div');
+                                alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+                                alertDiv.innerHTML = `
+                                    <strong>Erro!</strong> Erro ao conectar com o servidor.
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                `;
+                                document.querySelector('#editEquipModal .modal-body').insertBefore(alertDiv, document.querySelector('#editEquipModal .modal-body').firstChild);
+                            });
+                        } else {
+                            console.log("🔄 Fazendo PUT para T42...");
+                            // Para T42, faz PUT na API GoldenSat
+                            fetch(`https://intgoldensat.com.br/nestle/api/grid/${dados.unitnumber}/`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Token 236eeb21bd3b0c084eb82271412bf505c758837b'
+                                },
+                                body: JSON.stringify({
+                                    bl: dados.bl,
+                                    container: dados.container,
+                                    destino: dados.destino
+                                })
+                            })
+                            .then(async response => {
+                                console.log("📡 Resposta T42:", response.status);
+                                const modalAlert = document.getElementById('modalAlert');
+                                const data = await response.json();
+                                console.log("📄 Dados da resposta:", data);
+
+                                if (response.ok) {
+                                    console.log("✅ T42 atualizado com sucesso");
+                                    // Atualiza a linha da tabela
+                                    row.dataset.bl = dados.bl;
+                                    row.dataset.container = dados.container;
+                                    row.dataset.destino = dados.destino;
+                                    row.querySelector('.bl-cell').textContent = dados.bl;
+                                    row.querySelector('.container-cell').textContent = dados.container;
+                                    row.querySelector('.destino-cell').textContent = dados.destino;
+
+                                    modalAlert.innerHTML = `<div class='alert alert-success alert-dismissible fade show' role='alert'>Atualizado com sucesso!<button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button></div>`;
+                                } else {
+                                    console.log("❌ Erro T42:", data);
+                                    modalAlert.innerHTML = `<div class='alert alert-danger alert-dismissible fade show' role='alert'>Erro: ${JSON.stringify(data)}<button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button></div>`;
+                                }
+
+                                modalAlert.style.display = 'block';
+                                setTimeout(() => { modalAlert.style.display = 'none'; }, 5000);
+
+                                const modal = bootstrap.Modal.getInstance(document.getElementById('editEquipModal'));
+                                modal.hide();
+                            })
+                            .catch(error => {
+                                console.error("💥 Erro na requisição T42:", error);
+                                const modalAlert = document.getElementById('modalAlert');
+                                modalAlert.innerHTML = `<div class='alert alert-danger alert-dismissible fade show' role='alert'>Erro na requisição: ${error.message}<button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button></div>`;
+                                modalAlert.style.display = 'block';
+                                setTimeout(() => { modalAlert.style.display = 'none'; }, 5000);
+                            });
+                        }
+                    } else {
+                        console.log("❌ Row index não encontrado");
+                    }
+                };
+            } else {
+                console.log("❌ Botão salvar NÃO encontrado");
+            }
+        });
+
+        // Função para obter cookie CSRF
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    </script>
+    
+{% endblock %}

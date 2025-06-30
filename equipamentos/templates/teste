@@ -1,0 +1,399 @@
+
+{% extends "base.html" %}
+{% block title %}Equipamentos{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-3">
+    <h2 class="text-center mb-3">📋 Lista de Equipamentos</h2>
+
+    <a href="{% url 'equipamento_create' %}" class="btn btn-success mb-3">➕ Adicionar Equipamento</a>
+    <!-- Botão para exportar a tabela em Excel -->
+    <button id="exportExcel" class="btn btn-success mb-3">📊 Exportar para Excel</button>
+
+    <!-- Campo de Filtro de Pesquisa -->
+    <input
+        type="text"
+        id="searchInput"
+        class="form-control mb-3"
+        placeholder="🔍 Buscar equipamento por Identificador, Cliente ou Local de Entrega..."
+        onkeyup="filtrarEquipamentos()"
+    />
+
+    <style>
+        /* 
+           Tornamos o container principal uma coluna (flex-direction: column), 
+           e definimos a altura total como (tela - 80px). 
+        */
+        .container-content {
+    display: flex;
+    flex-direction: row;
+    height: 90vh; /* Mantém o tamanho total da tela */
+    gap: 10px;
+}
+
+/* Lado esquerdo: Mapa e Tabela de Resumo */
+#map-summary-container {
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Mapa ocupa 50% da altura */
+#map-container {
+    height: 50%;
+    border: 1px solid #ddd;
+}
+
+/* Tabela de resumo ocupa 50% da altura */
+#summary-container {
+    height: 50%;
+    border: 1px solid #ddd;
+    background: #f8f9fa;
+    text-align: center;
+}
+
+/* Lado direito: Tabela principal */
+#table-container {
+    width: 50%;
+    height: 90vh; /* Ajusta a altura da tabela para caber na tela */
+    overflow-y: auto; /* Permite rolagem vertical */
+    padding-left: 10px;
+    border: 1px solid #ddd;
+}
+
+.tabela-container {
+    max-height: 85vh; /* Define um limite de altura para ativar a rolagem */
+    overflow-y: auto; /* Ativa o scroll vertical */
+    overflow-x: auto; /* Garante rolagem horizontal se necessário */
+}
+
+    </style>
+<div class="container-content">
+    
+    <!-- 🔵 Lado Esquerdo: Mapa (50%) e Resumo (50%) -->
+    <div id="map-summary-container">
+        
+        <!-- Mapa -->
+        <div id="map-container">
+            <div id="map" style="height: 100%;"></div>
+        </div>
+
+        <!-- Resumo dos Equipamentos -->
+        <div id="summary-container">
+            <h5 class="text-center mb-3">📊 Resumo dos Equipamentos</h5>
+            <table class="table table-bordered text-center">
+                <thead class="table-dark">
+                    <tr>
+                        <th>🚚 Em Viagem</th>
+                        <th>📍 No Destino</th>
+                        <th>🏡 Na Fazenda</th>
+                        <th>🏢 Estoque Golden</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td id="count-viagem">0</td>
+                        <td id="count-destino">0</td>
+                        <td id="count-fazenda">0</td>
+                        <td id="count-golden">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 🔴 Lado Direito: Tabela Principal -->
+    <div id="table-container">
+        <div class="table-responsive tabela-container">
+            <table id="equipamentosTable" class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Data de Entrega</th>
+                        <th>Requisição</th>
+                        <th>Cliente</th>
+                        <th>Local de Entrega</th>
+                        <th>Modelo</th>
+                        <th class="equip-identificador">Identificador</th>
+                        <th>Data de Inserção</th>
+                        <th>Chegada no Destino</th>
+                        <th>Data de Retirada</th>
+                        <th>Envio ao Brasil</th>
+                        <th>Data no Brasil</th>
+                        <th class="equip-status-td">Status</th>
+                        <th>SLA da Operação</th>
+                        <th>Reposição</th>
+                        <th>Observação</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="t42-data">
+                    {% for equipamento in equipamentos %}
+                    <tr>
+                        <td>{{ equipamento.id }}</td>
+                        <td>{{ equipamento.data_entrega|date:"d/m/Y" }}</td>
+                        <td>{{ equipamento.requisicao }}</td>
+                        <td>{{ equipamento.cliente }}</td>
+                        <td>{{ equipamento.local_entrega }}</td>
+                        <td>{{ equipamento.modelo }}</td>
+                        <td class="equip-identificador">{{ equipamento.identificador }}</td>
+                        <td>{{ equipamento.data_insercao|date:"d/m/Y" }}</td>
+                        <td>{{ equipamento.data_chegada_destino|date:"d/m/Y" }}</td>
+                        <td>{{ equipamento.data_retirada|date:"d/m/Y" }}</td>
+                        <td>{{ equipamento.data_envio_brasil|date:"d/m/Y" }}</td>
+                        <td>{{ equipamento.data_brasil|date:"d/m/Y" }}</td>
+                        <td class="equip-status">
+                            <span class="badge bg-warning">Estoque Golden</span>
+                        </td>
+                        <td class="sla-operacao" 
+                            data-insercao="{{ equipamento.data_insercao|date:'Y-m-d' }}" 
+                            data-brasil="{{ equipamento.data_brasil|date:'Y-m-d' }}">
+                        </td>
+                        <td>{% if equipamento.reposicao %}✔️ {% else %}❌ Não{% endif %}</td>
+                        <td>{{ equipamento.observacao }}</td>
+                        <td>
+                            <a href="{% url 'equipamento_update' equipamento.pk %}" class="btn btn-warning btn-sm">✏️ Editar</a>
+                            
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="17" class="text-center">Nenhum equipamento cadastrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+</div>
+
+
+
+
+<!-- Leaflet.js (API de mapas) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+
+<script>
+// Inicializa o mapa e adiciona a camada OpenStreetMap
+// Inicializa o mapa e adiciona a camada do OpenStreetMap
+let map = L.map('map').setView([-23.5505, -46.6333], 5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+// Variáveis globais
+let markers = {};
+let equipamentosData = []; // Array que conterá os dados obtidos da API
+let trackerIcon = L.icon({
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/252/252025.png",
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -30]
+});
+
+// Array de cercas (fences) com suas propriedades
+let cercas = [
+    { nome: "Carmocoffe", coordenadas: [-21.6319, -45.2740], raio: 8000, cor: "red" },
+    { nome: "Alto Cafezal", coordenadas: [-18.9484, -47.0058], raio: 8000, cor: "red" },
+    { nome: "BOURBON SPECIALTY COFFEES", coordenadas: [-21.7804, -46.5690], raio: 8000, cor: "red" },
+    { nome: "COOXUPÉ", coordenadas: [-21.2937, -46.7222], raio: 500, cor: "red" },
+    { nome: "EXPOCACCER", coordenadas: [-18.9455, -47.0071], raio: 8000, cor: "red" },
+    { nome: "NKG", coordenadas: [-21.5771, -45.4721], raio: 5800, cor: "red" },
+    { nome: "VELOSO COFFEE", coordenadas: [-18.9981, -46.3011], raio: 8000, cor: "red" },
+    { nome: "ANTUERPIA", coordenadas: [51.2639, 4.41496], raio: 8000, cor: "green" },
+    { nome: "porto", coordenadas: [51.3032, 4.2824], raio: 8000, cor: "green" },
+    { nome: "VOLCAFÉ", coordenadas: [-21.5743, -45.4389], raio: 8000, cor: "red" },
+    { nome: "BREMEN", coordenadas: [53.1208, 8.7345], raio: 8000, cor: "green" },
+    { nome: "AVENCHES", coordenadas: [46.8938, 7.0514], raio: 8000, cor: "green" },
+    { nome: "BREMENPORT", coordenadas: [53.0584, 8.8966], raio: 8000, cor: "green" },
+    { nome: "BREMENPORT2", coordenadas: [53.1258, 8.7190], raio: 8000, cor: "green" },
+    { nome: "ROMONT", coordenadas: [46.6806, 6.9051], raio: 8000, cor: "green" },
+    { nome: "BARCELONA", coordenadas: [41.3504, 2.1635], raio: 8000, cor: "green" },
+    { nome: "orbe", coordenadas: [46.7266, 6.5365], raio: 8000, cor: "green" },
+    { nome: "Golden", coordenadas: [-23.6364, -46.5126], raio: 8000, cor: "blue" },
+];
+
+// Função para desenhar as cercas no mapa
+function adicionarCercas() {
+    cercas.forEach(cerca => {
+        L.circle(cerca.coordenadas, {
+            color: cerca.cor,
+            fillColor: cerca.cor,
+            fillOpacity: 0.3,
+            radius: cerca.raio
+        }).addTo(map).bindPopup(`<b>${cerca.nome}</b><br>Raio: ${cerca.raio / 1000} km`);
+    });
+}
+adicionarCercas();
+
+// Função para determinar o status detalhado do equipamento com base na sua posição
+// Se estiver dentro de uma cerca, retorna "Na Fazenda - [Nome da Cerca]",
+// "No Destino - [Nome da Cerca]" ou "Estoque Golden - [Nome da Cerca]" conforme a cor.
+// Caso contrário, retorna "Em Viagem".
+function verificarStatus(lat, lon) {
+    for (let cerca of cercas) {
+        // Usa o método distanceTo para calcular a distância real entre as coordenadas
+        let distancia = L.latLng(lat, lon).distanceTo(L.latLng(cerca.coordenadas[0], cerca.coordenadas[1]));
+        if (distancia <= cerca.raio) {
+            if (cerca.cor === "red") {
+                return "Na Fazenda - " + cerca.nome;
+            } else if (cerca.cor === "green") {
+                return "No Destino - " + cerca.nome;
+            } else if (cerca.cor === "blue") {
+                return "Estoque Golden - " + cerca.nome;
+            }
+        }
+    }
+    return "Em Viagem";
+}
+
+// Função para atualizar a tabela e os marcadores do mapa com os dados obtidos da API
+function atualizarEquipamentosComAPI(apiData) {
+    equipamentosData = apiData;
+    let tableBody = document.getElementById("t42-data");
+    tableBody.innerHTML = ""; // Limpa a tabela
+
+    // Remove marcadores antigos do mapa
+    Object.values(markers).forEach(marker => map.removeLayer(marker));
+    markers = {};
+
+    apiData.forEach(equip => {
+        // Obtém o status completo, por exemplo "Na Fazenda - Carmocoffe"
+        let fullStatus = verificarStatus(equip.latitude, equip.longitude);
+        // Cria o badge de status de acordo com o tipo
+        let statusBadge;
+        if (fullStatus.startsWith("Na Fazenda")) {
+            statusBadge = `<span class="badge bg-danger equip-status">${fullStatus}</span>`;
+        } else if (fullStatus.startsWith("No Destino")) {
+            statusBadge = `<span class="badge bg-success equip-status">${fullStatus}</span>`;
+        } else if (fullStatus.startsWith("Estoque Golden")) {
+            statusBadge = `<span class="badge bg-warning equip-status">${fullStatus}</span>`;
+        } else {
+            statusBadge = `<span class="badge bg-primary equip-status">${fullStatus}</span>`;
+        }
+
+        // Cria a linha da tabela, inserindo classes para facilitar a filtragem
+        let row = document.createElement("tr");
+        row.innerHTML = `
+            <td class="equip-identificador">${equip.unitnumber || "N/A"}</td>
+            <td>${equip.name || "N/A"}</td>
+            <td>${parseInt(equip.door) === 1 ? "Aberto" : "Fechado"}</td>
+            <td>${equip.event_text || "N/A"}</td>
+            <td>${equip.main_voltage || "N/A"} V</td>
+            <td>${equip.main_voltage ? Math.round((equip.main_voltage - 3.5) / (4.17 - 3.5) * 100) + "%" : "N/A"}</td>
+            <td>${parseInt(equip.installed) === 1 ? "Aberto" : "Fechado"}</td>
+            <td><a href="#" onclick="centralizarMapa(${equip.latitude}, ${equip.longitude})">📍 ${equip.latitude}, ${equip.longitude}</a></td>
+            <td>${equip.temperature !== undefined ? equip.temperature + "°C" : "N/A"}</td>
+            <td>${statusBadge}</td>
+            <td>${equip.datetime_utc ? formatarDataHora(equip.datetime_utc) : "N/A"}</td>
+        `;
+        tableBody.appendChild(row);
+
+        // Adiciona ou atualiza o marcador no mapa
+        markers[equip.unitnumber] = L.marker([equip.latitude, equip.longitude], { icon: trackerIcon })
+            .addTo(map)
+            .bindPopup(`<b>${equip.name}</b><br>Status: <strong>${fullStatus}</strong>`);
+    });
+
+    // Após atualizar a tabela, atualiza o resumo de contagens
+    atualizarResumo();
+}
+
+// Função para centralizar o mapa em uma posição específica
+function centralizarMapa(lat, lon) {
+    map.setView([lat, lon], 14);
+}
+
+// Função para buscar os dados da API e atualizar a tabela/mapa
+function fetchT42Data() {
+    fetch('/api/get_t42_data/')
+        .then(response => response.json())
+        .then(data => {
+            atualizarEquipamentosComAPI(data);
+        })
+        .catch(error => console.error("Erro ao buscar dados da API:", error));
+}
+
+// Função para filtrar os equipamentos com base na busca, status e nome da cerca
+function filtrarEquipamentos() {
+    let input = document.getElementById("searchInput").value.toLowerCase().trim();
+    let statusFilter = document.getElementById("statusFilter") ? document.getElementById("statusFilter").value : "all";
+    let cercaFilter = document.getElementById("cercaFilter") ? document.getElementById("cercaFilter").value : "all";
+
+    // Filtra o array global de equipamentos
+    let dadosFiltrados = equipamentosData.filter(equip => {
+        let idStr = String(equip.unitnumber || "").toLowerCase();
+        let fullStatus = verificarStatus(equip.latitude, equip.longitude);
+        let baseStatus = fullStatus;
+        let fenceName = "";
+        if (fullStatus.indexOf(" - ") !== -1) {
+            [baseStatus, fenceName] = fullStatus.split(" - ");
+        }
+        let matchInput = idStr.includes(input);
+        let matchStatus = (statusFilter === "all") || (baseStatus.toLowerCase() === statusFilter.toLowerCase());
+        let matchCerca = (cercaFilter === "all") || (fenceName.toLowerCase() === cercaFilter.toLowerCase());
+        return matchInput && matchStatus && matchCerca;
+    });
+
+    if (dadosFiltrados.length === 0) {
+        document.getElementById("t42-data").innerHTML = `<tr><td colspan="11" class="text-center">Nenhum equipamento encontrado.</td></tr>`;
+    } else {
+        atualizarEquipamentosComAPI(dadosFiltrados);
+        centralizarMapa(dadosFiltrados[0].latitude, dadosFiltrados[0].longitude);
+    }
+}
+
+// Função para formatar a data/hora (espera o formato "YYYYMMDDHHMMSS")
+function formatarDataHora(dataUtc) {
+    if (!dataUtc || dataUtc.length !== 14) return "N/A";
+    let ano = dataUtc.substring(0, 4);
+    let mes = dataUtc.substring(4, 6);
+    let dia = dataUtc.substring(6, 8);
+    let horas = dataUtc.substring(8, 10);
+    let minutos = dataUtc.substring(10, 12);
+    let segundos = dataUtc.substring(12, 14);
+    return `${dia}/${mes}/${ano} ${horas}:${minutos}:${segundos}`;
+}
+
+// Função para atualizar o resumo (contagem de status) exibido na tabela de resumo
+function atualizarResumo() {
+    // Inicializa os contadores
+    let countViagem = 0, countDestino = 0, countFazenda = 0, countGolden = 0;
+    // Percorre todas as células de status (com a classe "equip-status") na tabela
+    document.querySelectorAll(".equip-status").forEach(cell => {
+        let statusText = cell.textContent.trim();
+        if (statusText.includes("Em Viagem")) countViagem++;
+        else if (statusText.includes("No Destino")) countDestino++;
+        else if (statusText.includes("Na Fazenda")) countFazenda++;
+        else if (statusText.includes("Estoque Golden")) countGolden++;
+    });
+    // Atualiza os elementos de resumo com os contadores
+    if(document.getElementById("count-viagem"))
+        document.getElementById("count-viagem").textContent = countViagem;
+    if(document.getElementById("count-destino"))
+        document.getElementById("count-destino").textContent = countDestino;
+    if(document.getElementById("count-fazenda"))
+        document.getElementById("count-fazenda").textContent = countFazenda;
+    if(document.getElementById("count-golden"))
+        document.getElementById("count-golden").textContent = countGolden;
+}
+
+// Atualiza os dados a cada 90 segundos e na carga inicial
+setInterval(fetchT42Data, 90000);
+fetchT42Data();
+
+// Atualização extra para status via API (opcional)
+setInterval(function() {
+    fetch('/atualizar-status-via-api/')
+        .then(response => response.json())
+        .then(data => console.log(data))
+        .catch(error => console.error("Erro na atualização extra:", error));
+}, 90000);
+
+// Opcional: se houver eventos de filtro adicionais, garanta que eles chamem filtrarEquipamentos()
+// (por exemplo, os eventos onkeyup e onchange dos elementos HTML de filtro)
+
+</script>
+{% endblock %}

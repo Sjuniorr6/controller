@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ form.instance.pk|default:"Novo" }} Equipamento{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        background-color: #dbdde4;
+    }
+
+    /* Estilizando o formulário */
+    .form-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Estilo do título */
+    .form-container h2 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 20px;
+    }
+
+    /* Layout do formulário */
+    .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .form-group {
+        flex: 1;
+        min-width: 280px;
+    }
+
+    /* Labels */
+    .form-container .form-label {
+        font-weight: bold;
+        color: #555;
+    }
+
+    /* Campos de entrada */
+    .form-container .form-control {
+        width: 100%;
+        padding: 8px;
+        margin-top: 5px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+
+    /* Checkbox */
+    .form-check {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* Botões */
+    .form-container .btn {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        border-radius: 4px;
+        margin-top: 10px;
+    }
+
+    .btn-container {
+        display: flex;
+        gap: 10px;
+    }
+
+    .form-container .btn-primary {
+        background-color: #007bff;
+        border: none;
+    }
+
+    .form-container .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    .form-container .btn-secondary {
+        background-color: #6c757d;
+        border: none;
+    }
+
+    .form-container .btn-secondary:hover {
+        background-color: #565e64;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="form-container">
+        <h2 class="text-center">
+            {% if form.instance.pk %}✏️ Editar Equipamento{% else %}➕ Novo Equipamento{% endif %}
+        </h2>
+
+        <!-- Exibe erros do formulário, se existirem -->
+        {% if form.errors %}
+          <div class="alert alert-danger">
+            Verifique os campos abaixo.
+          </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- Aqui exibimos cada campo do EquipamentoForm no mesmo layout -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">{{ form.requisicao.label }}</label>
+                    {{ form.requisicao }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.cliente.label }}</label>
+                    {{ form.cliente }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">{{ form.local_entrega.label }}</label>
+                    {{ form.local_entrega }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.identificador.label }}</label>
+                    {{ form.identificador }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">{{ form.modelo.label }}</label>
+                    {{ form.modelo }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.CCID.label }}</label>
+                    {{ form.CCID }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">{{ form.data_entrega.label }}</label>
+                    {{ form.data_entrega }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.data_insercao.label }}</label>
+                    {{ form.data_insercao }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">{{ form.data_chegada_destino.label }}</label>
+                    {{ form.data_chegada_destino }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.data_retirada.label }}</label>
+                    {{ form.data_retirada }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">{{ form.data_envio_brasil.label }}</label>
+                    {{ form.data_envio_brasil }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.data_brasil.label }}</label>
+                    {{ form.data_brasil }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">{{ form.data_desembarque_maritimo.label }}</label>
+                    {{ form.data_desembarque_maritimo }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.data_do_desembarque.label }}</label>
+                    {{ form.data_do_desembarque }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">{{ form.status_operacao.label }}</label>
+                    {{ form.status_operacao }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.status_do_container.label }}</label>
+                    {{ form.status_do_container }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">{{ form.destino.label }}</label>
+                    {{ form.destino }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.local_atual.label }}</label>
+                    {{ form.local_atual }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">{{ form.sla_insercao.label }}</label>
+                    {{ form.sla_insercao }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.sla_viagem.label }}</label>
+                    {{ form.sla_viagem }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">{{ form.sla_retirada.label }}</label>
+                    {{ form.sla_retirada }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.sla_envio_brasil.label }}</label>
+                    {{ form.sla_envio_brasil }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">{{ form.sla_operacao.label }}</label>
+                    {{ form.sla_operacao }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">{{ form.sla_terrestre.label }}</label>
+                    {{ form.sla_terrestre }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">{{ form.sla_maritimo.label }}</label>
+                    {{ form.sla_maritimo }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Latitude</label>
+                    {{ form.latitude }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Longitude</label>
+                    {{ form.longitude }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label">BL</label>
+                    {{ form.BL }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Container</label>
+                    {{ form.container }}
+                </div>
+            </div>
+
+            <!-- Observação -->
+            <div class="mb-3">
+                <label class="form-label">{{ form.observacao.label }}</label>
+                {{ form.observacao }}
+            </div>
+
+            <!-- Checkbox Reposição -->
+            <div class="mb-3 form-check">
+                {{ form.reposicao }}
+                <label class="form-check-label" for="{{ form.reposicao.id_for_label }}">
+                    {{ form.reposicao.label }}
+                </label>
+            </div>
+
+            <!-- Botões -->
+            <div class="btn-container">
+                <button type="submit" class="btn btn-primary">💾 Salvar</button>
+                <a href="{% url 'equipamento_list' %}" class="btn btn-secondary">🔙 Voltar</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

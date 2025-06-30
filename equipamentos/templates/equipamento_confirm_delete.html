@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Excluir Equipamento{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center text-danger">🗑️ Excluir Equipamento</h2>
+    <p class="text-center">Tem certeza que deseja excluir o equipamento <strong>{{ object.identificador }}</strong>?</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Sim, Excluir</button>
+        <a href="{% url 'equipamento_list' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

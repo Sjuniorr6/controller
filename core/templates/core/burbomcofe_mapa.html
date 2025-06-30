@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Equipamentos{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-3">
+    <h2 class="text-center mb-3">📋 Lista de Equipamentos</h2>
+
+    <a href="{% url 'equipamento_create' %}" class="btn btn-success mb-3">➕ Adicionar Equipamento</a>
+    <!-- Botão para exportar a tabela em Excel -->
+    <button id="exportExcel" class="btn btn-success mb-3">📊 Exportar para Excel</button>
+
+    <!-- Campo de Filtro de Pesquisa -->
+    <input type="text" id="searchInput" class="form-control mb-3"
+           placeholder="🔍 Buscar equipamento por Unit Number ou Nome..."
+           onkeyup="filtrarEquipamentos()">
+
+    <!-- Mapa: posicionado acima da tabela -->
+    <div id="map-container" style="height: 50vh; margin-bottom: 20px; border: 1px solid #ddd;">
+        <div id="map" style="height: 100%;"></div>
+    </div>
+
+    <!-- Tabela Principal -->
+    <div id="table-container" style="overflow-y: auto; border: 1px solid #ddd;">
+        <div class="table-responsive">
+            <table id="equipamentosTable" class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Unit Number</th>
+                        <th>Nome</th>
+                        <th>Porta</th>
+                        <th>Evento</th>
+                        <th>Voltagem</th>
+                        <th>🔋 Carga (%)</th>
+                        <th>Instalado</th>
+                        <th>Localização</th>
+                        <th>Temperatura (°C)</th>
+                        <th>Status</th>
+                        <th>Última Atualização</th>
+                    </tr>
+                </thead>
+                <tbody id="t42-data">
+                    <!-- Linhas serão inseridas via JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Embute os unit numbers permitidos convertidos para JSON (proveniente do banco de dados) -->
+<script id="allowed_unitnumbers" type="application/json">
+    {{ allowed_unitnumbers_json|safe }}
+</script>
+
+<!-- Inclui Leaflet.js e XLSX -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+
+<script>
+    // Inicializa o mapa
+    let map = L.map('map').setView([-23.5505, -46.6333], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    let markers = {};
+    let equipamentosData = []; // Este array armazenará os equipamentos filtrados pela API
+    let trackerIcon = L.icon({
+        iconUrl: "https://cdn-icons-png.flaticon.com/512/252/252025.png",
+        iconSize: [30, 30],
+        iconAnchor: [15, 30],
+        popupAnchor: [0, -30]
+    });
+
+    // Array de cercas
+    let cercas = [
+        { nome: "Carmocoffe", coordenadas: [-21.6319, -45.2740], raio: 8000, cor: "red" },
+        { nome: "Alto Cafezal", coordenadas: [-18.9484, -47.0058], raio: 8000, cor: "red" },
+        { nome: "BOURBON SPECIALTY COFFEES", coordenadas: [-21.7804, -46.5690], raio: 8000, cor: "red" },
+        { nome: "COOXUPÉ", coordenadas: [-21.2937, -46.7222], raio: 500, cor: "red" },
+        { nome: "EXPOCACCER", coordenadas: [-18.9455, -47.0071], raio: 8000, cor: "red" },
+        { nome: "NKG", coordenadas: [-21.5771, -45.4721], raio: 5800, cor: "red" },
+        { nome: "VELOSO COFFEE", coordenadas: [-18.9981, -46.3011], raio: 8000, cor: "red" },
+        { nome: "ANTUERPIA", coordenadas: [51.2639, 4.41496], raio: 8000, cor: "green" },
+        { nome: "porto", coordenadas: [51.3032, 4.2824], raio: 8000, cor: "green" },
+        { nome: "VOLCAFÉ", coordenadas: [-21.5743, -45.4389], raio: 8000, cor: "red" },
+        { nome: "BREMEN", coordenadas: [53.1208, 8.7345], raio: 8000, cor: "green" },
+        { nome: "AVENCHES", coordenadas: [46.8938, 7.0514], raio: 8000, cor: "green" },
+        { nome: "BREMENPORT", coordenadas: [53.0584, 8.8966], raio: 8000, cor: "green" },
+        { nome: "BREMENPORT2", coordenadas: [53.1258, 8.7190], raio: 8000, cor: "green" },
+        { nome: "ROMONT", coordenadas: [46.6806, 6.9051], raio: 8000, cor: "green" },
+        { nome: "BARCELONA", coordenadas: [41.3504, 2.1635], raio: 8000, cor: "green" },
+        { nome: "orbe", coordenadas: [46.7266, 6.5365], raio: 8000, cor: "green" },
+        { nome: "Golden", coordenadas: [-23.6364, -46.5126], raio: 8000, cor: "blue" }
+    ];
+
+    function adicionarCercas() {
+        cercas.forEach(cerca => {
+            L.circle(cerca.coordenadas, {
+                color: cerca.cor,
+                fillColor: cerca.cor,
+                fillOpacity: 0.3,
+                radius: cerca.raio
+            }).addTo(map).bindPopup(`<b>${cerca.nome}</b><br>Raio: ${cerca.raio / 1000} km`);
+        });
+    }
+    adicionarCercas();
+
+    // Função para formatar a data/hora (supondo que datetime_utc venha no formato "YYYYMMDDHHMMSS")
+    function formatarDataHora(dataUtc) {
+        if (!dataUtc || dataUtc.length !== 14) return "N/A";
+        let ano = dataUtc.substring(0, 4);
+        let mes = dataUtc.substring(4, 6);
+        let dia = dataUtc.substring(6, 8);
+        let horas = dataUtc.substring(8, 10);
+        let minutos = dataUtc.substring(10, 12);
+        let segundos = dataUtc.substring(12, 14);
+        return `${dia}/${mes}/${ano} ${horas}:${minutos}:${segundos}`;
+    }
+
+    // Função para centralizar o mapa
+    function centralizarMapa(lat, lon) {
+        map.setView([lat, lon], 14);
+    }
+
+    // Função para determinar o status do equipamento com base na cerca em que se encontra:
+    // - Cercas vermelhas: "Na Fazenda"
+    // - Cercas verdes: "No Destino"
+    // - Cerca azul: "Estoque Golden"
+    // - Fora de qualquer cerca: "Em Viagem"
+    function verificarStatus(lat, lon) {
+        for (let cerca of cercas) {
+            let distancia = L.latLng(lat, lon).distanceTo(L.latLng(cerca.coordenadas[0], cerca.coordenadas[1]));
+            if (distancia <= cerca.raio) {
+                if (cerca.cor === "red") return "Na Fazenda";
+                else if (cerca.cor === "green") return "No Destino";
+                else if (cerca.cor === "blue") return "Estoque Golden";
+            }
+        }
+        return "Em Viagem";
+    }
+
+    // Função para atualizar a tabela e o mapa com os equipamentos filtrados da API
+    function atualizarEquipamentosComAPI(apiData) {
+        equipamentosData = apiData;
+        let tbody = document.getElementById('t42-data');
+        tbody.innerHTML = ""; // Limpa a tabela
+
+        apiData.forEach(unit => {
+            let status = verificarStatus(unit.latitude, unit.longitude);
+            let row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${unit.unitnumber || "N/A"}</td>
+                <td>${unit.name || "N/A"}</td>
+                <td>${parseInt(unit.door) === 1 ? "Aberto" : "Fechado"}</td>
+                <td>${unit.event_text || "N/A"}</td>
+                <td>${unit.main_voltage || "N/A"} V</td>
+                <td>${unit.main_voltage ? Math.round((unit.main_voltage - 3.5) / (4.17 - 3.5) * 100) + "%" : "N/A"}</td>
+                <td>${parseInt(unit.installed) === 1 ? "Aberto" : "Fechado"}</td>
+                <td><a href="#" onclick="centralizarMapa(${unit.latitude}, ${unit.longitude})">📍 ${unit.latitude}, ${unit.longitude}</a></td>
+                <td>${(unit.temperature !== undefined && unit.temperature !== null) ? unit.temperature + "°C" : "N/A"}</td>
+                <td>${status}</td>
+                <td>${unit.datetime_utc ? formatarDataHora(unit.datetime_utc) : "N/A"}</td>
+            `;
+            tbody.appendChild(row);
+
+            // Adiciona marcador no mapa (se houver coordenadas válidas)
+            if (unit.latitude && unit.longitude) {
+                L.marker([unit.latitude, unit.longitude], { icon: trackerIcon })
+                  .addTo(map)
+                  .bindPopup(`<b>${unit.name || "N/A"}</b><br>Status: <strong>${status}</strong>`);
+            }
+        });
+    }
+
+    // Função para exportar a tabela para Excel
+    document.getElementById("exportExcel").addEventListener("click", function() {
+        let table = document.getElementById("equipamentosTable");
+        if (!table) {
+            alert("Erro: Tabela não encontrada!");
+            return;
+        }
+        let ws = XLSX.utils.table_to_sheet(table);
+        let wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Equipamentos");
+        XLSX.writeFile(wb, "Equipamentos.xlsx");
+    });
+
+    // Função para filtrar os equipamentos com base na pesquisa e centralizar o mapa
+    function filtrarEquipamentos() {
+        let input = document.getElementById("searchInput").value.toLowerCase().trim();
+        // Filtra os dados globais (equipamentosData) pelos campos "unitnumber" e "name"
+        let filteredEquipments = equipamentosData.filter(unit => {
+            let unitNum = String(unit.unitnumber || "").toLowerCase();
+            let name = String(unit.name || "").toLowerCase();
+            return unitNum.includes(input) || name.includes(input);
+        });
+        atualizarEquipamentosComAPI(filteredEquipments);
+        if (filteredEquipments.length > 0) {
+            centralizarMapa(filteredEquipments[0].latitude, filteredEquipments[0].longitude);
+        }
+    }
+
+    // Função para buscar os dados da API e filtrar apenas os equipamentos permitidos
+    function fetchT42Data() {
+        fetch('/api/get_t42_data/')
+            .then(response => response.json())
+            .then(data => {
+                // Recupera a lista de unit numbers permitidos do JSON embutido
+                var allowedUnitNumbers = JSON.parse(document.getElementById('allowed_unitnumbers').textContent);
+                console.log("Allowed Unit Numbers:", allowedUnitNumbers);
+                // Filtra os dados retornados pela API para manter somente os equipamentos cujo unitnumber esteja na lista permitida
+                let filteredData = data.filter(unit => allowedUnitNumbers.includes(String(unit.unitnumber).trim()));
+                atualizarEquipamentosComAPI(filteredData);
+            })
+            .catch(error => console.error("Erro ao buscar dados da API:", error));
+    }
+
+    // Atualiza periodicamente (a cada 30 segundos) e também ao carregar a página
+    setInterval(fetchT42Data, 30000);
+    fetchT42Data();
+</script>
+{% endblock %}

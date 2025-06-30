@@ -1,0 +1,214 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}T42 Tetis{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome para os ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+
+    <style>
+
+body {
+        background-color: #dbdde4;
+        }
+
+        /* Sidebar fixa */
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            background: rgba(255, 255, 255, 0.9);
+            padding-top: 20px;
+            box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 1;
+        }
+
+        /* Estilização dos links da sidebar */
+        .sidebar nav {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .sidebar a {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            color: black;
+            padding: 12px 20px;
+            text-decoration: none;
+            font-weight: bold;
+            width: 90%;
+            transition: background 0.3s ease;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+
+        .sidebar a:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Dropdown principal */
+        .dropdown {
+            width: 90%;
+            text-align: left;
+            margin: 5px auto;
+        }
+
+        .dropdown-btn {
+            width: 100%;
+            background: none;
+            color: black;
+            font-weight: bold;
+            padding: 12px 20px;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .dropdown-content {
+            display: none;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
+            flex-direction: column;
+            width: 100%;
+            padding: 5px 0;
+        }
+
+        .dropdown-content a {
+            color: black;
+            padding: 10px 20px;
+            text-decoration: none;
+            display: block;
+            font-size: 14px;
+        }
+
+        .dropdown-content a:hover {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Sub-dropdown */
+        .sub-dropdown {
+            display: none;
+            padding-left: 20px;
+        }
+
+        /* Botão de logout */
+        .logout-btn {
+            background: red;
+            color: white;
+            font-weight: bold;
+            border: none;
+            padding: 10px 15px;
+            width: 90%;
+            border-radius: 5px;
+            margin: 10px auto;
+            transition: background 0.3s ease, transform 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logout-btn:hover {
+            background: darkred;
+            transform: scale(1.05);
+        }
+
+        /* Ajustando o conteúdo para ocupar o espaço restante */
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            width: calc(100% - 250px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 1;
+            position: relative;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h4 class="text-center">T42 - Plataforma</h4>
+        <nav>
+            <a href="{% url 'home' %}">
+                <i class="fas fa-home fa-lg"></i> 
+                <span>Home</span>
+            </a>
+            <a href="{% url 'mapa' %}">
+                <i class="fas fa-map-marked-alt fa-lg"></i> 
+                <span>Mapa</span>
+            </a>
+            <a href="{% url 'equipamento_list' %}">
+                <i class="fas fa-cogs fa-lg"></i> 
+                <span>Equipamentos</span>
+            </a>
+
+            <!-- Dropdown Clientes -->
+            <div class="dropdown">
+                <button class="dropdown-btn" onclick="toggleDropdown('clientesDropdown')">
+                    <i class="fas fa-users fa-lg"></i> 
+                    <span>Clientes</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+
+                <div class="dropdown-content" id="clientesDropdown">
+                    <!-- Botão para cadastrar clientes -->
+                    <a href="{% url 'cadastrar_cliente' %}" class="text-success">
+                        ➕ Cadastrar Cliente
+                    </a>
+
+                    <!-- Listagem dinâmica dos clientes -->
+                    {% for cliente in clientes %}
+                    <div class="dropdown">
+                        <button class="dropdown-btn sub-btn" onclick="toggleDropdown('{{ cliente.nome|slugify }}')">
+                            {{ cliente.nome }} <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="sub-dropdown" id="{{ cliente.nome|slugify }}">
+                            <a href="{% url 'espelhamento_cliente' cliente.pk %}">📡 Espelhamento</a>
+                            <a href="{% url 'equipamentos_cliente' cliente.pk %}">⚙️ Equipamentos</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </nav>
+    </div>
+    
+    <main class="main-content content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        function toggleDropdown(id) {
+            var element = document.getElementById(id);
+            if (element.style.display === "none" || element.style.display === "") {
+                element.style.display = "block";
+            } else {
+                element.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>
