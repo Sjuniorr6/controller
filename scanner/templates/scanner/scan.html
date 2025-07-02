@@ -53,33 +53,44 @@
     </form>
 
     <script>
-        const scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
-
-        scanner.addListener('scan', function(content) {
-            inserirValorNoCampo(content);
-            fetch("/registrar/", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ codigo: content })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === "ok") {
-                    alert("Equipamento registrado com sucesso!");
-                } else {
-                    alert("Erro ao registrar: " + data.mensagem);
-                }
-            });
-            scanner.stop(); // Para o scanner após leitura bem-sucedida
-        });
-
+        let scanner = null;
         function iniciarScanner() {
+            if (!scanner) {
+                scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
+                scanner.addListener('scan', function(content) {
+                    inserirValorNoCampo(content);
+                    fetch("/registrar/", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({ codigo: content })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === "ok") {
+                            alert("Equipamento registrado com sucesso!");
+                        } else {
+                            alert("Erro ao registrar: " + data.mensagem);
+                        }
+                    });
+                    scanner.stop();
+                });
+            }
             Instascan.Camera.getCameras().then(function(cameras) {
-                const traseira = cameras.find(c => c.name.toLowerCase().includes('back'));
+                // Tenta encontrar a câmera traseira por vários nomes
+                const traseira = cameras.find(c =>
+                    c.name && (
+                        c.name.toLowerCase().includes('back') ||
+                        c.name.toLowerCase().includes('traseira') ||
+                        c.name.toLowerCase().includes('rear') ||
+                        c.name.toLowerCase().includes('environment')
+                    )
+                );
                 if (traseira) {
                     scanner.start(traseira);
+                } else if (cameras.length > 1) {
+                    scanner.start(cameras[1]);
                 } else if (cameras.length > 0) {
                     scanner.start(cameras[0]);
                 } else {
@@ -101,10 +112,9 @@
                 <button type="button" class="btn-add-campo" onclick="adicionarCampo(this)">+</button>
             `;
             container.appendChild(novoCampo);
-            botao.style.display = 'none'; // Esconde o botão "+" anterior
+            botao.style.display = 'none';
         }
 
-        // Função para inserir valor do QR Code no próximo campo vazio
         function inserirValorNoCampo(valor) {
             const campos = document.querySelectorAll('#campos-container input[name="campo[]"]');
             let inserido = false;
@@ -116,7 +126,6 @@
                 }
             }
             if (!inserido) {
-                // Se todos preenchidos, adiciona novo campo e insere
                 adicionarCampo(document.querySelector('#campos-container .btn-add-campo:last-of-type'));
                 setTimeout(() => {
                     const novosCampos = document.querySelectorAll('#campos-container input[name="campo[]"]');
