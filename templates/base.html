@@ -83,21 +83,22 @@
                     <li class="nav-item">
                         <a href="{% url 'mapa' %}" class="nav-link"><i class="fas fa-map-location-dot"></i> Mapa</a>
                     </li>
+                    <li class="nav-item">
+                        <a href="/scanner/" class="nav-link"><i class="fas fa-qrcode"></i> Scanner</a>
+                    </li>
+                </ul>
+            </div>
 
-                  
-
-               
+            <!-- Botão de Logout -->
+            <form id="logout-form" action="{% url 'logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-sign-out-alt"></i> Sair
+                </button>
+            </form>
         </div>
-
-        <!-- Botão de Logout -->
-        <form id="logout-form" action="{% url 'logout' %}" method="post">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger">
-                <i class="fas fa-sign-out-alt"></i> Sair
-            </button>
-        </form>
-    </div>
-</nav>
+    </nav>
+</div>
 
 <!-- Conteúdo Principal -->
 <main class="main-content">
