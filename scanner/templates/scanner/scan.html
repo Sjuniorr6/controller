@@ -38,27 +38,43 @@
         Para usar a câmera, acesse este site via <b>HTTPS</b> ou <b>localhost</b>.<br>
         O navegador bloqueia a câmera em HTTP por segurança.
     </div>
-    <label for="camera-select">Escolha a câmera:</label>
-    <select id="camera-select" style="margin-bottom:10px;"></select>
-    <button onclick="iniciarScanner()">Iniciar Scanner</button>
-    <video id="preview"></video>
-
-    <!-- Formulário dinâmico -->
-    <form id="form-dinamico" style="margin-top: 30px; text-align: left; display: inline-block;">
-        <div id="campos-container">
-            <div class="campo-item" style="margin-bottom: 8px;">
-                <input type="text" name="campo[]" placeholder="Digite algo..." style="padding: 6px; width: 180px;">
-                <button type="button" class="btn-add-campo" onclick="adicionarCampo(this)">+</button>
-            </div>
-        </div>
-        <button type="submit" style="margin-top: 10px;">Enviar</button>
-    </form>
 
     <script>
+    function isIOS() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+    function isSafari() {
+        return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    }
+
+    if (isIOS() && isSafari()) {
+        // Safari/iOS: só permite abrir a traseira
+        document.write('<button onclick="abrirCameraTraseira()">Iniciar Scanner Traseiro (iOS/Safari)</button>');
+        document.write('<video id="preview" autoplay playsinline style="width:100%;max-width:400px;"></video>');
+        window.abrirCameraTraseira = function() {
+            const constraints = {
+                video: { facingMode: { exact: "environment" } }
+            };
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(function(stream) {
+                    const video = document.getElementById('preview');
+                    video.srcObject = stream;
+                    video.play();
+                    // Aqui você pode integrar com uma lib de QRCode, como jsQR, para ler o código do vídeo
+                    // Exemplo de integração pode ser adicionado aqui
+                })
+                .catch(function(err) {
+                    alert("Não foi possível acessar a câmera traseira: " + err);
+                });
+        }
+    } else {
+        // Outros navegadores: select de câmeras + Instascan
+        document.write('<label for="camera-select">Escolha a câmera:</label>');
+        document.write('<select id="camera-select" style="margin-bottom:10px;"></select>');
+        document.write('<button onclick="iniciarScanner()">Iniciar Scanner</button>');
+        document.write('<video id="preview"></video>');
         let scanner = null;
         let camerasDisponiveis = [];
-
-        // Preenche o select com as câmeras disponíveis
         Instascan.Camera.getCameras().then(function(cameras) {
             camerasDisponiveis = cameras;
             const select = document.getElementById('camera-select');
@@ -71,12 +87,10 @@
         }).catch(function(e) {
             alert('Erro ao acessar as câmeras: ' + e);
         });
-
-        function iniciarScanner() {
+        window.iniciarScanner = function() {
             const select = document.getElementById('camera-select');
             const idx = select.value ? parseInt(select.value) : 0;
             const camera = camerasDisponiveis[idx];
-
             if (!scanner) {
                 scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
                 scanner.addListener('scan', function(content) {
@@ -105,39 +119,50 @@
                 alert("Nenhuma câmera selecionada.");
             }
         }
+    }
+    // Funções do formulário dinâmico (mantém igual)
+    function adicionarCampo(botao) {
+        const container = document.getElementById('campos-container');
+        const novoCampo = document.createElement('div');
+        novoCampo.className = 'campo-item';
+        novoCampo.style.marginBottom = '8px';
+        novoCampo.innerHTML = `
+            <input type="text" name="campo[]" placeholder="Digite algo..." style="padding: 6px; width: 180px;">
+            <button type="button" class="btn-add-campo" onclick="adicionarCampo(this)">+</button>
+        `;
+        container.appendChild(novoCampo);
+        botao.style.display = 'none';
+    }
+    function inserirValorNoCampo(valor) {
+        const campos = document.querySelectorAll('#campos-container input[name="campo[]"]');
+        let inserido = false;
+        for (let campo of campos) {
+            if (!campo.value) {
+                campo.value = valor;
+                inserido = true;
+                break;
+            }
+        }
+        if (!inserido) {
+            adicionarCampo(document.querySelector('#campos-container .btn-add-campo:last-of-type'));
+            setTimeout(() => {
+                const novosCampos = document.querySelectorAll('#campos-container input[name="campo[]"]');
+                novosCampos[novosCampos.length-1].value = valor;
+            }, 50);
+        }
+    }
+    </script>
 
-        function adicionarCampo(botao) {
-            const container = document.getElementById('campos-container');
-            const novoCampo = document.createElement('div');
-            novoCampo.className = 'campo-item';
-            novoCampo.style.marginBottom = '8px';
-            novoCampo.innerHTML = `
+    <!-- Formulário dinâmico -->
+    <form id="form-dinamico" style="margin-top: 30px; text-align: left; display: inline-block;">
+        <div id="campos-container">
+            <div class="campo-item" style="margin-bottom: 8px;">
                 <input type="text" name="campo[]" placeholder="Digite algo..." style="padding: 6px; width: 180px;">
                 <button type="button" class="btn-add-campo" onclick="adicionarCampo(this)">+</button>
-            `;
-            container.appendChild(novoCampo);
-            botao.style.display = 'none';
-        }
-
-        function inserirValorNoCampo(valor) {
-            const campos = document.querySelectorAll('#campos-container input[name="campo[]"]');
-            let inserido = false;
-            for (let campo of campos) {
-                if (!campo.value) {
-                    campo.value = valor;
-                    inserido = true;
-                    break;
-                }
-            }
-            if (!inserido) {
-                adicionarCampo(document.querySelector('#campos-container .btn-add-campo:last-of-type'));
-                setTimeout(() => {
-                    const novosCampos = document.querySelectorAll('#campos-container input[name="campo[]"]');
-                    novosCampos[novosCampos.length-1].value = valor;
-                }, 50);
-            }
-        }
-    </script>
+            </div>
+        </div>
+        <button type="submit" style="margin-top: 10px;">Enviar</button>
+    </form>
 
 </body>
 </html>
