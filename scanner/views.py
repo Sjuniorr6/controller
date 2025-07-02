@@ -22,8 +22,8 @@ def registrar_equipamento(request):
                 return JsonResponse({'status': 'erro', 'mensagem': 'Nenhum código enviado.'}, status=400)
         criados = []
         for codigo in codigos:
-            equipamento, criado = Equipamento.objects.get_or_create(codigo=codigo)
-            criados.append({'codigo': codigo, 'criado': criado})
+            equipamento = Equipamento.objects.create(codigo=codigo)
+            criados.append({'codigo': codigo, 'criado': True})
         return JsonResponse({
             'status': 'ok',
             'mensagem': f'{len(criados)} código(s) processado(s).',
