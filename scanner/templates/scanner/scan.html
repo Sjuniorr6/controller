@@ -38,8 +38,10 @@
         Para usar a câmera, acesse este site via <b>HTTPS</b> ou <b>localhost</b>.<br>
         O navegador bloqueia a câmera em HTTP por segurança.
     </div>
-    <video id="preview"></video>
+    <label for="camera-select">Escolha a câmera:</label>
+    <select id="camera-select" style="margin-bottom:10px;"></select>
     <button onclick="iniciarScanner()">Iniciar Scanner</button>
+    <video id="preview"></video>
 
     <!-- Formulário dinâmico -->
     <form id="form-dinamico" style="margin-top: 30px; text-align: left; display: inline-block;">
@@ -54,7 +56,27 @@
 
     <script>
         let scanner = null;
+        let camerasDisponiveis = [];
+
+        // Preenche o select com as câmeras disponíveis
+        Instascan.Camera.getCameras().then(function(cameras) {
+            camerasDisponiveis = cameras;
+            const select = document.getElementById('camera-select');
+            cameras.forEach((cam, idx) => {
+                const option = document.createElement('option');
+                option.value = idx;
+                option.text = cam.name || `Câmera ${idx+1}`;
+                select.appendChild(option);
+            });
+        }).catch(function(e) {
+            alert('Erro ao acessar as câmeras: ' + e);
+        });
+
         function iniciarScanner() {
+            const select = document.getElementById('camera-select');
+            const idx = select.value ? parseInt(select.value) : 0;
+            const camera = camerasDisponiveis[idx];
+
             if (!scanner) {
                 scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
                 scanner.addListener('scan', function(content) {
@@ -77,29 +99,11 @@
                     scanner.stop();
                 });
             }
-            Instascan.Camera.getCameras().then(function(cameras) {
-                // Tenta encontrar a câmera traseira por vários nomes
-                const traseira = cameras.find(c =>
-                    c.name && (
-                        c.name.toLowerCase().includes('back') ||
-                        c.name.toLowerCase().includes('traseira') ||
-                        c.name.toLowerCase().includes('rear') ||
-                        c.name.toLowerCase().includes('environment')
-                    )
-                );
-                if (traseira) {
-                    scanner.start(traseira);
-                } else if (cameras.length > 1) {
-                    scanner.start(cameras[1]);
-                } else if (cameras.length > 0) {
-                    scanner.start(cameras[0]);
-                } else {
-                    alert("Nenhuma câmera foi encontrada.");
-                }
-            }).catch(function(e) {
-                console.error("Erro ao acessar a câmera:", e);
-                alert("Erro ao acessar a câmera.");
-            });
+            if (camera) {
+                scanner.start(camera);
+            } else {
+                alert("Nenhuma câmera selecionada.");
+            }
         }
 
         function adicionarCampo(botao) {
