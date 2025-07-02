@@ -355,6 +355,7 @@
                                 FGPSTime: equipamentoEncontrado.FGPSTime,
                                 FBattery: equipamentoEncontrado.FBattery,
                                 FDoor: equipamentoEncontrado.FDoor,
+                                FExpandProto: equipamentoEncontrado.FExpandProto,
                                 main_voltage: null,
                                 door: '0',
                                 light: '0',
@@ -421,19 +422,33 @@
                 
                 if (unit.FRecvTime && unit.FGPSTime) {
                     // AssetsControls
-                    const portaStatus = unit.FDoor !== undefined && unit.FDoor !== null ? 
-                        (unit.FDoor < 2 ? "Fechada" : "Aberta") : "N/A";
-                    
-                    // Luminosidade baseada no status da porta
-                    let luminosidade = "N/A";
+                    let portaStatus = "N/A";
                     if (unit.FDoor !== undefined && unit.FDoor !== null) {
-                        if (unit.FDoor < 2) {
-                            // Porta fechada = luminosidade 0
-                            luminosidade = "0";
+                        if (parseInt(unit.FDoor) === 1) {
+                            portaStatus = "Aberta";
+                        } else if (parseInt(unit.FDoor) === 0) {
+                            portaStatus = "Fechada";
                         } else {
-                            // Porta aberta = luminosidade aleatória entre 1 e 100
-                            luminosidade = Math.floor(Math.random() * 100) + 1;
+                            portaStatus = `FDoor: ${unit.FDoor}`;
                         }
+                        console.log(`🚪 FDoor (porta): ${unit.FDoor} | Status: ${portaStatus}`);
+                    }
+                    // Luminosidade extraída do FExpandProto.FDesc
+                    let luminosidade = "N/A";
+                    if (unit.FExpandProto && unit.FExpandProto.FDesc) {
+                        try {
+                            const descObj = typeof unit.FExpandProto.FDesc === 'string' ? JSON.parse(unit.FExpandProto.FDesc) : unit.FExpandProto.FDesc;
+                            if (descObj.fLx !== undefined && descObj.fLx !== null) {
+                                luminosidade = descObj.fLx.toString();
+                                console.log(`🔆 fLx (luminosidade): ${descObj.fLx}`);
+                            } else {
+                                console.log('⚠️ fLx não encontrado em FDesc:', descObj);
+                            }
+                        } catch (e) {
+                            console.log("Erro ao parsear FDesc:", e, unit.FExpandProto.FDesc);
+                        }
+                    } else {
+                        console.log('⚠️ FExpandProto ou FDesc ausente:', unit.FExpandProto);
                     }
                     
                     row.innerHTML = `
@@ -481,20 +496,35 @@
                     
                     if (unit.FRecvTime && unit.FGPSTime) {
                         // AssetsControls
-                        const portaStatus = unit.FDoor !== undefined && unit.FDoor !== null ? 
-                            (unit.FDoor < 2 ? "Fechada" : "Aberta") : "N/A";
-                
-                        // Luminosidade baseada no status da porta
-                        let luminosidade = "N/A";
+                        let portaStatus = "N/A";
                         if (unit.FDoor !== undefined && unit.FDoor !== null) {
-                            if (unit.FDoor < 2) {
-                                // Porta fechada = luminosidade 0
-                                luminosidade = "0";
+                            if (parseInt(unit.FDoor) === 1) {
+                                portaStatus = "Aberta";
+                            } else if (parseInt(unit.FDoor) === 0) {
+                                portaStatus = "Fechada";
                             } else {
-                                // Porta aberta = luminosidade aleatória entre 1 e 100
-                                luminosidade = Math.floor(Math.random() * 100) + 1;
+                                portaStatus = `FDoor: ${unit.FDoor}`;
                             }
+                            console.log(`🚪 FDoor (porta): ${unit.FDoor} | Status: ${portaStatus}`);
                         }
+                
+                                            // Luminosidade extraída do FExpandProto.FDesc
+                    let luminosidade = "N/A";
+                    if (unit.FExpandProto && unit.FExpandProto.FDesc) {
+                        try {
+                            const descObj = typeof unit.FExpandProto.FDesc === 'string' ? JSON.parse(unit.FExpandProto.FDesc) : unit.FExpandProto.FDesc;
+                            if (descObj.fLx !== undefined && descObj.fLx !== null) {
+                                luminosidade = descObj.fLx.toString();
+                                console.log(`🔆 fLx (luminosidade): ${descObj.fLx}`);
+                            } else {
+                                console.log('⚠️ fLx não encontrado em FDesc:', descObj);
+                            }
+                        } catch (e) {
+                            console.log("Erro ao parsear FDesc:", e, unit.FExpandProto.FDesc);
+                        }
+                    } else {
+                        console.log('⚠️ FExpandProto ou FDesc ausente:', unit.FExpandProto);
+                    }
                         
                         popupContent = `
                             <b>Equipamento ${unit.unitnumber}</b><br>
