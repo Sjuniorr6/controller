@@ -43,6 +43,9 @@ T42_PASS = "Inte@20xx"
 
 def get_t42_data(request):
     """Busca os dados da API T42 e retorna como JSON para o frontend."""
+    # Pega o ID da querystring (se existir)
+    search_id = request.GET.get('id', '').strip()
+    
     params = {
         "commandname": "get_last_transmits",
         "user": T42_USER,
@@ -55,6 +58,15 @@ def get_t42_data(request):
         response.raise_for_status()  # Garante que a resposta foi bem-sucedida
         data = response.json()
 
+        # Se foi passado um ID, filtra os resultados
+        if search_id:
+            if isinstance(data, list):
+                filtered_data = [unit for unit in data if str(unit.get('unitnumber', '')) == search_id]
+            else:
+                filtered_data = []
+            return JsonResponse(filtered_data, safe=False)
+        
+        # Se não foi passado ID, retorna todos os dados (comportamento original)
         return JsonResponse(data, safe=False)
 
     except requests.RequestException as e:
@@ -62,6 +74,8 @@ def get_t42_data(request):
 
 def get_assetscontrols_data(request):
     """Busca os dados da API AssetsControls e retorna como JSON para o frontend."""
+    # Pega o ID da querystring (se existir)
+    search_id = request.GET.get('id', '').strip()
     url = 'http://cloud.assetscontrols.com:8092/OpenApi/LBS'
     data = {
         'FAction': 'QueryLBSMonitorListByFGUIDs',
@@ -88,6 +102,12 @@ def get_assetscontrols_data(request):
         # Tenta fazer parse do JSON
         try:
             json_data = json.loads(page)
+            # Se foi passado um ID, filtra os resultados
+            if search_id and json_data and 'FObject' in json_data and isinstance(json_data['FObject'], list):
+                filtered = [item for item in json_data['FObject'] if str(item.get('FAssetID', '') or item.get('FVehicleName', '')) == search_id]
+                json_data['FObject'] = filtered
+                return JsonResponse(json_data, safe=False)
+            # Se não foi passado ID, retorna todos os dados (comportamento original)
             return JsonResponse(json_data, safe=False)
         except json.JSONDecodeError:
             # Se não for JSON válido, retorna como texto

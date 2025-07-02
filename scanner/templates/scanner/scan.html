@@ -497,11 +497,18 @@
         botao.style.display = 'none';
     }
     function inserirValorNoCampo(valor) {
+        // Limpar o valor: remover tudo antes do & e o próprio &
+        let valorLimpo = valor;
+        const indexAmpersand = valor.indexOf('&');
+        if (indexAmpersand !== -1) {
+            valorLimpo = valor.substring(indexAmpersand + 1);
+        }
+        
         const campos = document.querySelectorAll('#campos-container input[name="campo[]"]');
         let inserido = false;
         for (let campo of campos) {
             if (!campo.value) {
-                campo.value = valor;
+                campo.value = valorLimpo;
                 inserido = true;
                 break;
             }
@@ -510,7 +517,7 @@
             adicionarCampo(document.querySelector('#campos-container .btn-add-campo:last-of-type'));
             setTimeout(() => {
                 const novosCampos = document.querySelectorAll('#campos-container input[name="campo[]"]');
-                novosCampos[novosCampos.length-1].value = valor;
+                novosCampos[novosCampos.length-1].value = valorLimpo;
             }, 50);
         }
     }

@@ -298,7 +298,7 @@
             
             let searchInput = document.getElementById("searchInput").value.trim();
             
-            fetch('/api/get_t42_data/')
+            fetch(`/api/get_t42_data/?id=${encodeURIComponent(searchInput)}`)
                 .then(response => response.json())
                 .then(data => {
                     console.log("Dados T42 recebidos:", data.length);
@@ -335,7 +335,7 @@
             // Busca direta por ID específico (mais rápido)
             let searchInput = document.getElementById("searchInput").value.trim();
             
-            fetch('/api/get_assetscontrols_data/')
+            fetch(`/api/get_assetscontrols_data/?id=${encodeURIComponent(searchInput)}`)
                 .then(response => response.json())
                 .then(data => {
                     console.log("Dados AssetsControls recebidos:", data);
