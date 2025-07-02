@@ -223,7 +223,7 @@
 
     <script>
         console.log("🚀 SCRIPT CARREGADO!");
-        
+    
         // Variáveis globais
         let map;
         let markers = {};
@@ -249,7 +249,7 @@
             }).addTo(map);
             
             console.log("✅ Mapa inicializado com sucesso");
-            
+    
             // Testa se o campo de busca existe
             const searchInput = document.getElementById("searchInput");
             if (searchInput) {
@@ -264,13 +264,13 @@
                 console.log("✅ Botão de busca encontrado");
             } else {
                 console.log("❌ Botão de busca NÃO encontrado");
-            }
+        }
         });
-        
+    
         // Função para filtrar os equipamentos
         function filtrarEquipamentos() {
             console.log("🚀 FUNÇÃO FILTRAR EQUIPAMENTOS CHAMADA!");
-            
+    
             let searchInput = document.getElementById("searchInput").value.trim();
             console.log("Termo de busca:", searchInput);
             
@@ -290,7 +290,7 @@
                 carregarT42();
             }
         }
-        
+    
         // Função para carregar T42
         function carregarT42() {
             console.log("Carregando T42...");
@@ -326,12 +326,12 @@
                     console.log("Erro ao carregar dados T42");
                 });
         }
-        
+    
         // Função para carregar AssetsControls
         function carregarAssetsControls() {
             console.log("Carregando AssetsControls...");
             showLoading("Carregando AssetsControls...");
-            
+        
             // Busca direta por ID específico (mais rápido)
             let searchInput = document.getElementById("searchInput").value.trim();
             
@@ -368,7 +368,7 @@
                             hideLoading();
                             atualizarTabela([equipamentoProcessado]);
                             atualizarMapa([equipamentoProcessado]);
-                        } else {
+            } else {
                             console.log("Equipamento não encontrado na AssetsControls");
                             hideLoading();
                         }
@@ -450,17 +450,17 @@
                 } else {
                     // T42
                     const bateria = unit.main_voltage ? Math.round((unit.main_voltage - 3.5) / (4.17 - 3.5) * 100) + "%" : "N/A";
-                    row.innerHTML = `
+                row.innerHTML = `
                         <td><strong>${unit.unitnumber}</strong></td>
                         <td>${bateria}🔋</td>
-                        <td>${parseInt(unit.door) === 1 ? "Aberto" : "Fechado"}</td>
-                        <td>${parseInt(unit.light)}</td>
-                        <td class="bl-cell">${unit.BL || ""}</td>
-                        <td class="container-cell">${unit.container || ""}</td>
-                        <td class="destino-cell">${unit.destino || ""}</td>
-                        <td><small>${unit.latitude}, ${unit.longitude}</small></td>
+                    <td>${parseInt(unit.door) === 1 ? "Aberto" : "Fechado"}</td>
+                    <td>${parseInt(unit.light)}</td>
+                    <td class="bl-cell">${unit.BL || ""}</td>
+                    <td class="container-cell">${unit.container || ""}</td>
+                    <td class="destino-cell">${unit.destino || ""}</td>
+                    <td><small>${unit.latitude}, ${unit.longitude}</small></td>
                         <td><small>${unit.datetime_utc || "N/A"}</small></td>
-                    `;
+                `;
                 }
                 
                 // Adiciona evento de clique para abrir modal
@@ -474,7 +474,7 @@
             // Remove marcadores antigos
             Object.values(markers).forEach(marker => map.removeLayer(marker));
             markers = {};
-            
+    
             dados.forEach(unit => {
                 if (unit.latitude && unit.longitude) {
                     let popupContent = '';
@@ -483,7 +483,7 @@
                         // AssetsControls
                         const portaStatus = unit.FDoor !== undefined && unit.FDoor !== null ? 
                             (unit.FDoor < 2 ? "Fechada" : "Aberta") : "N/A";
-                        
+                
                         // Luminosidade baseada no status da porta
                         let luminosidade = "N/A";
                         if (unit.FDoor !== undefined && unit.FDoor !== null) {
@@ -509,12 +509,12 @@
                     } else {
                         // T42
                         popupContent = `
-                            <b>Equipamento ${unit.unitnumber}</b><br>
-                            <strong>📍 Coordenadas:</strong><br>
-                            <small>${unit.latitude}, ${unit.longitude}</small><br><br>
-                            Bateria: <strong>${unit.main_voltage ? Math.round((unit.main_voltage - 3.5) / (4.17 - 3.5) * 100) + "%" : "N/A"}🔋</strong><br>
-                            Porta: <strong>${parseInt(unit.door) === 1 ? "Aberto" : "Fechado"}</strong><br>
-                            Luminosidade: <strong>${parseInt(unit.light)}</strong><br>
+                        <b>Equipamento ${unit.unitnumber}</b><br>
+                        <strong>📍 Coordenadas:</strong><br>
+                        <small>${unit.latitude}, ${unit.longitude}</small><br><br>
+                        Bateria: <strong>${unit.main_voltage ? Math.round((unit.main_voltage - 3.5) / (4.17 - 3.5) * 100) + "%" : "N/A"}🔋</strong><br>
+                        Porta: <strong>${parseInt(unit.door) === 1 ? "Aberto" : "Fechado"}</strong><br>
+                        Luminosidade: <strong>${parseInt(unit.light)}</strong><br>
                             Última Atualização: <strong>${unit.datetime_utc || "N/A"}</strong>
                         `;
                     }
@@ -543,8 +543,8 @@
                     </td>
                 </tr>
             `;
-        }
-        
+            }
+    
         // Função para esconder loading (não esconde mais a tabela)
         function hideLoading() {
             // Não faz nada - a tabela permanece visível
@@ -723,7 +723,7 @@
                                 setTimeout(() => { modalAlert.style.display = 'none'; }, 5000);
 
                                 const modal = bootstrap.Modal.getInstance(document.getElementById('editEquipModal'));
-                                modal.hide();
+                        modal.hide();
                             })
                             .catch(error => {
                                 console.error("💥 Erro na requisição T42:", error);

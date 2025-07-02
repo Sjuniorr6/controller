@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-pclz3_zdo7svvdix*h*%h(1&ehfjb7rd-83u&k!eb=sg&a0y*j
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['52.55.208.89', 'gscontroller.com.br', '10.0.0.153']
+ALLOWED_HOSTS = ['10.0.0.153', 'gscontroller.com.br', '127.0.0.1']
 
 
 LOGIN_REDIRECT_URL = "home"  # Para onde o usuário vai depois do login
@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'equipamentos',
-    
+    'scanner',
 ]
 
 REST_FRAMEWORK = {

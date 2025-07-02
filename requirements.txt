@@ -145,3 +145,8 @@ xhtml2pdf==0.2.17
 xmltodict==0.14.2
 zope.interface==7.2
 zopfli==0.2.3.post1
+# Dependências para scanner de câmera
+opencv-python-headless==4.8.1.78
+pyzbar==0.1.9
+qrcode[pil]==7.4.2
+Pillow==10.0.1
