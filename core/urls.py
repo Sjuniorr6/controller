@@ -7,7 +7,7 @@ from .views import (
     equipamento_listcarmo_view, MapaView, get_t42_data, get_assetscontrols_data,
     AltocafezalCreateView, equipamento_list_view, burbomcofeCreateView,
     equipamento_listburbom_view, equipamento_listnkg_view, equipamento_listvelosocofe_view,
-    update_assetscontrols_data
+    update_assetscontrols_data, update_t42_data, verificar_fdoor
 )
 
 urlpatterns = [
@@ -21,6 +21,7 @@ urlpatterns = [
     path('api/get_t42_data/', get_t42_data, name="get_t42_data"),
     path('api/get_assetscontrols_data/', get_assetscontrols_data, name="get_assetscontrols_data"),
     path('api/assetscontrols/<str:asset_id>/', update_assetscontrols_data, name='update_assetscontrols_data'),
+    path('api/t42/<str:unit_id>/', update_t42_data, name='update_t42_data'),
     path('api/equipamentos/', equipamento_list_view, name='get_equipamentos'),
     
     # Cadastros
@@ -44,4 +45,7 @@ urlpatterns = [
     path('equipamentos/velosoc', equipamento_listvelosocofe_view, name='velosoc_mapa'),
     path('equipamentos/velosog', equipamento_listvelosogreen_view, name='velosog_mapa'),   
     path('equipamentos/volcafe', equipamento_listvolcafe_view, name='volcafe_mapa'),
+    
+    #api
+     path('verificar-fdoor/', verificar_fdoor, name='verificar_fdoor'),
 ]

@@ -566,3 +566,113 @@ def update_assetscontrols_data(request, asset_id):
         "success": False,
         "error": "Method not allowed"
     }, status=405)
+
+
+
+
+from django.http import JsonResponse
+import requests
+import json
+
+# Dicionário de controle (para simulação de memória temporária)
+from django.core.cache import cache
+
+def verificar_fdoor(request):
+    url = 'http://cloud.assetscontrols.com:8092/OpenApi/LBS'
+    payload = {
+        'FAction': 'QueryLBSMonitorListByFGUIDs',
+        'FTokenID': '7e88e035-285a-4f7d-8e63-8b403d04dcfa',
+        'FGUIDs': 'f0d11885-b7db-4565-a7d1-14f3e8faa362',
+        'FDateType': 2
+    }
+
+    try:
+        response = requests.post(url, json=payload)
+        data = response.json()
+
+        if data['Result'] == 200 and data['FObject']:
+            equipamento = data['FObject'][0]
+            status = int(equipamento.get('FDoor', -1))
+            nome = equipamento.get('FVehicleName', 'Equipamento desconhecido')
+            guid = equipamento.get('FAssetID')
+            fdesc_raw = equipamento.get("FExpandProto", {}).get("FDesc", "")
+            fdesc = json.loads(fdesc_raw) if fdesc_raw else {}
+            flx = float(fdesc.get("fLx", -1))
+
+            # Verifica estado anterior da porta
+            ultimo_status = cache.get(f'ultimo_status_{guid}')
+            cache.set(f'ultimo_status_{guid}', status, timeout=3600)
+
+            if status == 1 and ultimo_status != 1:
+                return JsonResponse({'evento': 'aberta', 'equipamento': nome})
+            elif status == 0 and ultimo_status == 1:
+                return JsonResponse({'evento': 'fechada', 'equipamento': nome})
+
+            # Verifica luminosidade
+            if flx > 15 and not cache.get(f'alerta_luz_{guid}'):
+                cache.set(f'alerta_luz_{guid}', True, timeout=3600)
+                return JsonResponse({'evento': 'luz', 'equipamento': nome, 'valor': flx})
+
+    except Exception as e:
+        print("Erro ao consultar a API:", e)
+
+    return JsonResponse({'evento': 'nenhum', 'equipamento': ''})
+
+def update_t42_data(request, unit_id):
+    """Atualiza dados de um equipamento T42 na API Golden via proxy (evita CORS)"""
+    if request.method == 'PUT':
+        try:
+            import json
+            data = json.loads(request.body)
+            
+            # URL da API Golden (T42)
+            url = f'https://intgoldensat.com.br/nestle/api/grid/{unit_id}/'
+            
+            # Payload para Golden (T42)
+            payload = {
+                'bl': data.get('bl', ''),
+                'container': data.get('container', ''),
+                'destino': data.get('destino', '')
+            }
+            
+            # Headers
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': 'Token 236eeb21bd3b0c084eb82271412bf505c758837b'
+            }
+            
+            print(f"🔄 Fazendo PUT para Golden via proxy: {url}")
+            print(f"📦 Payload: {payload}")
+            
+            # Faz a requisição PUT para a API Golden através do backend
+            response = requests.put(url, json=payload, headers=headers)
+            
+            print(f"📡 Resposta Golden: {response.status_code}")
+            
+            if response.ok:
+                response_data = response.json()
+                print(f"✅ Golden atualizado com sucesso: {response_data}")
+                
+                return JsonResponse({
+                    "success": True,
+                    "message": "Dados atualizados com sucesso na plataforma Golden",
+                    "data": response_data
+                })
+            else:
+                print(f"❌ Erro Golden: {response.status_code} - {response.text}")
+                return JsonResponse({
+                    "success": False,
+                    "error": f"Erro na API Golden: {response.status_code} - {response.text}"
+                }, status=response.status_code)
+                
+        except Exception as e:
+            print(f"💥 Erro na função update_t42_data: {str(e)}")
+            return JsonResponse({
+                "success": False,
+                "error": f"Erro interno: {str(e)}"
+            }, status=500)
+    
+    return JsonResponse({
+        "success": False,
+        "error": "Method not allowed"
+    }, status=405)

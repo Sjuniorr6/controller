@@ -713,13 +713,13 @@
                                 document.querySelector('#editEquipModal .modal-body').insertBefore(alertDiv, document.querySelector('#editEquipModal .modal-body').firstChild);
                             });
                         } else {
-                            console.log("🔄 Fazendo PUT para T42...");
-                            // Para T42, faz PUT na API GoldenSat
-                            fetch(`https://intgoldensat.com.br/nestle/api/grid/${dados.unitnumber}/`, {
+                            console.log('🔄 Fazendo PUT para T42 via backend...');
+                            
+                            fetch(`/api/t42/${dados.unitnumber}/`, {
                                 method: 'PUT',
                                 headers: {
                                     'Content-Type': 'application/json',
-                                    'Authorization': 'Token 236eeb21bd3b0c084eb82271412bf505c758837b'
+                                    'X-CSRFToken': getCookie('csrftoken')
                                 },
                                 body: JSON.stringify({
                                     bl: dados.bl,
@@ -727,13 +727,16 @@
                                     destino: dados.destino
                                 })
                             })
-                            .then(async response => {
-                                console.log("📡 Resposta T42:", response.status);
+                            .then(response => {
+                                console.log('📡 Resposta T42:', response.status);
+                                return response.json();
+                            })
+                            .then(data => {
+                                console.log('📄 Dados da resposta:', data);
                                 const modalAlert = document.getElementById('modalAlert');
-                                const data = await response.json();
-                                console.log("📄 Dados da resposta:", data);
-
-                                if (response.ok) {
+                                
+                                if (data.success) {
+                                    // Sucesso
                                     console.log("✅ T42 atualizado com sucesso");
                                     // Atualiza a linha da tabela
                                     row.dataset.bl = dados.bl;
@@ -743,22 +746,23 @@
                                     row.querySelector('.container-cell').textContent = dados.container;
                                     row.querySelector('.destino-cell').textContent = dados.destino;
 
-                                    modalAlert.innerHTML = `<div class='alert alert-success alert-dismissible fade show' role='alert'>Atualizado com sucesso!<button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button></div>`;
+                                    modalAlert.innerHTML = `<div class='alert alert-success alert-dismissible fade show' role='alert'>${data.message}<button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button></div>`;
                                 } else {
+                                    // Erro
                                     console.log("❌ Erro T42:", data);
-                                    modalAlert.innerHTML = `<div class='alert alert-danger alert-dismissible fade show' role='alert'>Erro: ${JSON.stringify(data)}<button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button></div>`;
+                                    modalAlert.innerHTML = `<div class='alert alert-danger alert-dismissible fade show' role='alert'>Erro: ${data.error || 'Erro ao salvar dados.'}<button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button></div>`;
                                 }
 
                                 modalAlert.style.display = 'block';
                                 setTimeout(() => { modalAlert.style.display = 'none'; }, 5000);
 
                                 const modal = bootstrap.Modal.getInstance(document.getElementById('editEquipModal'));
-                        modal.hide();
+                                modal.hide();
                             })
                             .catch(error => {
-                                console.error("💥 Erro na requisição T42:", error);
+                                console.log('❌ Erro T42:', error);
                                 const modalAlert = document.getElementById('modalAlert');
-                                modalAlert.innerHTML = `<div class='alert alert-danger alert-dismissible fade show' role='alert'>Erro na requisição: ${error.message}<button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button></div>`;
+                                modalAlert.innerHTML = `<div class='alert alert-danger alert-dismissible fade show' role='alert'>Erro ao conectar com o servidor: ${error.message}<button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button></div>`;
                                 modalAlert.style.display = 'block';
                                 setTimeout(() => { modalAlert.style.display = 'none'; }, 5000);
                             });

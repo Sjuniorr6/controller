@@ -61,8 +61,230 @@
         .dropdown-item i {
             margin-right: 8px;
         }
+
+        /* Estilos para os popups de alerta */
+        .custom-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            z-index: 10000;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            animation: popupSlideIn 0.5s ease-out;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .custom-popup.porta-aberta {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            border: 2px solid #ff4757;
+        }
+
+        .custom-popup.porta-fechada {
+            background: linear-gradient(135deg, #2ed573 0%, #1e90ff 100%);
+            border: 2px solid #2ed573;
+        }
+
+        .custom-popup.luminosidade {
+            background: linear-gradient(135deg, #ffa726 0%, #ff7043 100%);
+            border: 2px solid #ff9800;
+        }
+
+        .popup-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .popup-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .popup-message {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .popup-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .popup-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            animation: overlayFadeIn 0.3s ease-out;
+        }
+
+        @keyframes popupSlideIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        @keyframes overlayFadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Responsividade para mobile */
+        @media (max-width: 768px) {
+            .custom-popup {
+                padding: 20px;
+                max-width: 90%;
+            }
+            
+            .popup-icon {
+                font-size: 2.5rem;
+            }
+            
+            .popup-title {
+                font-size: 1.3rem;
+            }
+            
+            .popup-message {
+                font-size: 1rem;
+            }
+        }
     </style>
 </head>
+
+<audio id="alarme-audio" src="/static/som-alerta.mp3" preload="auto"></audio>
+<script>
+let statusAtual = null;
+
+function showCustomPopup(type, message, equipamento, valor = null) {
+  // Remove popup anterior se existir
+  const existingPopup = document.querySelector('.custom-popup');
+  const existingOverlay = document.querySelector('.popup-overlay');
+  if (existingPopup) existingPopup.remove();
+  if (existingOverlay) existingOverlay.remove();
+
+  // Cria overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'popup-overlay';
+  document.body.appendChild(overlay);
+
+  // Cria popup
+  const popup = document.createElement('div');
+  popup.className = `custom-popup ${type}`;
+
+  let icon, title, content;
+  
+  switch(type) {
+    case 'porta-aberta':
+      icon = '🚨';
+      title = 'ALERTA: PORTA ABERTA';
+      content = `Equipamento: <strong>${equipamento}</strong>`;
+      break;
+    case 'porta-fechada':
+      icon = '✅';
+      title = 'PORTA FECHADA';
+      content = `Equipamento: <strong>${equipamento}</strong>`;
+      break;
+    case 'luminosidade':
+      icon = '💡';
+      title = 'ALERTA: LUMINOSIDADE';
+      content = `Equipamento: <strong>${equipamento}</strong><br>Valor: <strong>${valor}</strong>`;
+      break;
+    default:
+      icon = 'ℹ️';
+      title = 'INFORMAÇÃO';
+      content = message;
+  }
+
+  popup.innerHTML = `
+    <span class="popup-icon">${icon}</span>
+    <div class="popup-title">${title}</div>
+    <div class="popup-message">${content}</div>
+    <button class="popup-close" onclick="closePopup()">Fechar</button>
+  `;
+
+  document.body.appendChild(popup);
+
+  // Auto-close após 8 segundos
+  setTimeout(() => {
+    closePopup();
+  }, 8000);
+}
+
+function closePopup() {
+  const popup = document.querySelector('.custom-popup');
+  const overlay = document.querySelector('.popup-overlay');
+  if (popup) popup.remove();
+  if (overlay) overlay.remove();
+}
+
+function verificarPorta() {
+  fetch("{% url 'verificar_fdoor' %}")
+    .then(response => response.json())
+    .then(data => {
+      const audio = document.getElementById("alarme-audio");
+
+      if (data.evento === 'aberta') {
+        if (audio) {
+          audio.play().catch(err => console.log("Erro ao tocar som:", err));
+        }
+        showCustomPopup('porta-aberta', '', data.equipamento);
+      }
+
+      if (data.evento === 'fechada') {
+        if (audio) {
+          audio.play().catch(err => console.log("Erro ao tocar som:", err));
+        }
+        showCustomPopup('porta-fechada', '', data.equipamento);
+      }
+
+      if (data.evento === 'luz') {
+        if (audio) {
+          audio.play().catch(err => console.log("Erro ao tocar som:", err));
+        }
+        showCustomPopup('luminosidade', '', data.equipamento, data.valor);
+      }
+    });
+}
+
+setInterval(verificarPorta, 15000); // Verifica a cada 15 segundos
+</script>
+    
 <body>
 
 <!-- Navbar dentro do quadro arredondado -->
