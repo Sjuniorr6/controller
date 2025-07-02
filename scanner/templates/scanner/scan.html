@@ -2,71 +2,67 @@
 <html>
 <head>
     <title>Scanner de Equipamentos</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
             padding: 20px;
         }
-        #reader {
-            width: 300px;
-            margin: auto;
+
+        #preview {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 10px;
+            border: 2px solid #ccc;
+            margin: 20px auto;
         }
+
         #result {
             margin-top: 20px;
             font-size: 20px;
             font-weight: bold;
         }
-        .btn-scan-app {
-            display: inline-block;
-            margin-bottom: 15px;
+
+        button {
+            margin-top: 10px;
             padding: 10px 20px;
-            background: #28a745;
-            color: #fff;
-            font-weight: bold;
-            border-radius: 8px;
-            text-decoration: none;
-            transition: background 0.2s;
-        }
-        .btn-scan-app:hover {
-            background: #218838;
+            font-size: 16px;
         }
     </style>
 </head>
 <body>
 
     <h2>Scanner de Equipamento (QR Code)</h2>
-    <!-- Botão para abrir o ScanApp diretamente no navegador -->
-    <a href="https://scanapp.org/" target="_blank" class="btn-scan-app">
-        Abrir ScanApp Externo
-    </a>
-    <br>
-    <button id="scan-voucher-btn" class="btn-scan-app" style="background:#007bff; margin-bottom: 20px;">Escanear Voucher</button>
-    <div id="reader-equip" style="margin-bottom: 20px;"></div>
-    <div id="reader-voucher" style="display:none;"></div>
-    <div id="voucher-area" style="display:none; margin-top:20px;">
-        Código do Voucher: <span id="voucher-codigo" style="font-weight:bold;"></span>
-        <button id="copiar-btn" style="display:inline-block; margin-left:10px; padding:6px 14px; font-size:0.95em; border-radius:6px; background:#333; color:#fff; border:none;">Copiar</button>
-        <span id="copiado-msg" style="display:none; color:green; margin-left:10px;">Voucher copiado!</span>
+    <div style="color: #b00; font-size: 0.95em; margin-bottom: 10px;">
+        Para usar a câmera, acesse este site via <b>HTTPS</b> ou <b>localhost</b>.<br>
+        O navegador bloqueia a câmera em HTTP por segurança.
     </div>
-    <div id="result">ID do Equipamento: <span id="codigo-display">Nenhum</span></div>
+    <video id="preview"></video>
+    <button onclick="iniciarScanner()">Iniciar Scanner</button>
+
+    <!-- Formulário dinâmico -->
+    <form id="form-dinamico" style="margin-top: 30px; text-align: left; display: inline-block;">
+        <div id="campos-container">
+            <div class="campo-item" style="margin-bottom: 8px;">
+                <input type="text" name="campo[]" placeholder="Digite algo..." style="padding: 6px; width: 180px;">
+                <button type="button" class="btn-add-campo" onclick="adicionarCampo(this)">+</button>
+            </div>
+        </div>
+        <button type="submit" style="margin-top: 10px;">Enviar</button>
+    </form>
 
     <script>
-        // Scanner de Equipamento (carregado por padrão)
-        let html5QrcodeScannerEquip = new Html5QrcodeScanner(
-            "reader-equip", { fps: 10, qrbox: 250 });
-        html5QrcodeScannerEquip.render(onScanSuccess);
+        const scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
 
-        // Função para escanear equipamento
-        function onScanSuccess(decodedText, decodedResult) {
-            document.getElementById("codigo-display").textContent = decodedText;
+        scanner.addListener('scan', function(content) {
+            inserirValorNoCampo(content);
             fetch("/registrar/", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ codigo: decodedText })
+                body: JSON.stringify({ codigo: content })
             })
             .then(response => response.json())
             .then(data => {
@@ -76,46 +72,58 @@
                     alert("Erro ao registrar: " + data.mensagem);
                 }
             });
-            html5QrcodeScannerEquip.clear(); // Parar o scanner após o primeiro sucesso
-            // Recarregar o scanner após 2 segundos para novo scan
-            setTimeout(() => {
-                html5QrcodeScannerEquip.render(onScanSuccess);
-            }, 2000);
-        }
+            scanner.stop(); // Para o scanner após leitura bem-sucedida
+        });
 
-        // Voucher
-        let html5QrcodeScannerVoucher = null;
-        document.getElementById('scan-voucher-btn').onclick = function() {
-            document.getElementById('reader-equip').style.display = 'none';
-            document.getElementById('reader-voucher').style.display = 'block';
-            document.getElementById('voucher-area').style.display = 'none';
-            if (!html5QrcodeScannerVoucher) {
-                html5QrcodeScannerVoucher = new Html5QrcodeScanner(
-                    "reader-voucher", { fps: 10, qrbox: 250 });
-            }
-            html5QrcodeScannerVoucher.clear();
-            html5QrcodeScannerVoucher.render(onScanVoucherSuccess);
-        };
-
-        function onScanVoucherSuccess(decodedText, decodedResult) {
-            document.getElementById('voucher-codigo').textContent = decodedText;
-            document.getElementById('voucher-area').style.display = 'block';
-            document.getElementById('reader-voucher').style.display = 'none';
-            document.getElementById('reader-equip').style.display = 'block';
-            if (html5QrcodeScannerVoucher) {
-                html5QrcodeScannerVoucher.clear();
-            }
-        }
-
-        document.getElementById('copiar-btn').onclick = function() {
-            const valor = document.getElementById('voucher-codigo').textContent;
-            navigator.clipboard.writeText(valor).then(() => {
-                document.getElementById('copiado-msg').style.display = 'inline';
-                setTimeout(() => {
-                    document.getElementById('copiado-msg').style.display = 'none';
-                }, 1500);
+        function iniciarScanner() {
+            Instascan.Camera.getCameras().then(function(cameras) {
+                const traseira = cameras.find(c => c.name.toLowerCase().includes('back'));
+                if (traseira) {
+                    scanner.start(traseira);
+                } else if (cameras.length > 0) {
+                    scanner.start(cameras[0]);
+                } else {
+                    alert("Nenhuma câmera foi encontrada.");
+                }
+            }).catch(function(e) {
+                console.error("Erro ao acessar a câmera:", e);
+                alert("Erro ao acessar a câmera.");
             });
-        };
+        }
+
+        function adicionarCampo(botao) {
+            const container = document.getElementById('campos-container');
+            const novoCampo = document.createElement('div');
+            novoCampo.className = 'campo-item';
+            novoCampo.style.marginBottom = '8px';
+            novoCampo.innerHTML = `
+                <input type="text" name="campo[]" placeholder="Digite algo..." style="padding: 6px; width: 180px;">
+                <button type="button" class="btn-add-campo" onclick="adicionarCampo(this)">+</button>
+            `;
+            container.appendChild(novoCampo);
+            botao.style.display = 'none'; // Esconde o botão "+" anterior
+        }
+
+        // Função para inserir valor do QR Code no próximo campo vazio
+        function inserirValorNoCampo(valor) {
+            const campos = document.querySelectorAll('#campos-container input[name="campo[]"]');
+            let inserido = false;
+            for (let campo of campos) {
+                if (!campo.value) {
+                    campo.value = valor;
+                    inserido = true;
+                    break;
+                }
+            }
+            if (!inserido) {
+                // Se todos preenchidos, adiciona novo campo e insere
+                adicionarCampo(document.querySelector('#campos-container .btn-add-campo:last-of-type'));
+                setTimeout(() => {
+                    const novosCampos = document.querySelectorAll('#campos-container input[name="campo[]"]');
+                    novosCampos[novosCampos.length-1].value = valor;
+                }, 50);
+            }
+        }
     </script>
 
 </body>
