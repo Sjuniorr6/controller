@@ -186,6 +186,33 @@
         </div>
         <button type="submit" style="margin-top: 10px;">Enviar</button>
     </form>
+    <script>
+    document.getElementById('form-dinamico').onsubmit = function(e) {
+        e.preventDefault();
+        const campos = Array.from(document.querySelectorAll('#campos-container input[name="campo[]"]'))
+            .map(input => input.value)
+            .filter(val => val.trim() !== "");
+        if (campos.length === 0) {
+            alert("Preencha pelo menos um campo!");
+            return;
+        }
+        fetch("/registrar/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ codigos: campos })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "ok") {
+                alert("Códigos registrados com sucesso!");
+            } else {
+                alert("Erro ao registrar: " + data.mensagem);
+            }
+        });
+    };
+    </script>
 
 </body>
 </html>

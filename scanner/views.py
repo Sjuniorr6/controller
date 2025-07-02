@@ -12,14 +12,21 @@ def index(request):
 def registrar_equipamento(request):
     if request.method == 'POST':
         data = json.loads(request.body)
-        codigo = data.get('codigo')
-        if codigo:
+        codigos = data.get('codigos')
+        if not codigos:
+            # Suporte ao envio antigo (um código só)
+            codigo = data.get('codigo')
+            if codigo:
+                codigos = [codigo]
+            else:
+                return JsonResponse({'status': 'erro', 'mensagem': 'Nenhum código enviado.'}, status=400)
+        criados = []
+        for codigo in codigos:
             equipamento, criado = Equipamento.objects.get_or_create(codigo=codigo)
-            return JsonResponse({
-                'status': 'ok',
-                'mensagem': 'Equipamento registrado com sucesso.' if criado else 'Equipamento já registrado.',
-                'criado': criado
-            })
-        else:
-            return JsonResponse({'status': 'erro', 'mensagem': 'Código inválido'}, status=400)
+            criados.append({'codigo': codigo, 'criado': criado})
+        return JsonResponse({
+            'status': 'ok',
+            'mensagem': f'{len(criados)} código(s) processado(s).',
+            'resultados': criados
+        })
     return JsonResponse({'status': 'erro', 'mensagem': 'Método não permitido'}, status=405)
