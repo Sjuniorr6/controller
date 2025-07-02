@@ -190,15 +190,15 @@
     document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('form-dinamico').onsubmit = function(e) {
             e.preventDefault();
-            console.log("Formulário enviado!");
-            const campos = Array.from(document.querySelectorAll('#campos-container input[name="campo[]"]'))
+            const campos = Array.from(document.querySelectorAll('#campos-container input[name=\"campo[]\"]'))
                 .map(input => input.value)
                 .filter(val => val.trim() !== "");
+            console.log("Enviando para o backend:", campos);
             if (campos.length === 0) {
                 alert("Preencha pelo menos um campo!");
                 return;
             }
-            fetch("/registrar/", {
+            fetch(window.location.origin + "/scanner/registrar/", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -207,11 +207,16 @@
             })
             .then(response => response.json())
             .then(data => {
+                console.log("Resposta do backend:", data);
                 if (data.status === "ok") {
                     alert("Códigos registrados com sucesso!");
                 } else {
                     alert("Erro ao registrar: " + data.mensagem);
                 }
+            })
+            .catch(error => {
+                console.error("Erro na requisição fetch:", error);
+                alert("Erro ao enviar dados para o backend.");
             });
         };
     });
