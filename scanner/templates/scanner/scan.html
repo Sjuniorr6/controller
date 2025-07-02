@@ -1,46 +1,122 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>Leitor QR Code</title>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <style>
-    #reader {
-      width: 350px;
-      margin: 0 auto;
-    }
-  </style>
+    <title>Scanner de Equipamentos</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        #reader {
+            width: 300px;
+            margin: auto;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .btn-scan-app {
+            display: inline-block;
+            margin-bottom: 15px;
+            padding: 10px 20px;
+            background: #28a745;
+            color: #fff;
+            font-weight: bold;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn-scan-app:hover {
+            background: #218838;
+        }
+    </style>
 </head>
 <body>
-  <h2>Leitor de QR Code</h2>
-  <div id="reader"></div>
-  <p><strong>Resultado:</strong> <span id="resultado"></span></p>
 
-  <script>
-    const resultContainer = document.getElementById("resultado");
+    <h2>Scanner de Equipamento (QR Code)</h2>
+    <!-- Botão para abrir o ScanApp diretamente no navegador -->
+    <a href="https://scanapp.org/" target="_blank" class="btn-scan-app">
+        Abrir ScanApp Externo
+    </a>
+    <br>
+    <button id="scan-voucher-btn" class="btn-scan-app" style="background:#007bff; margin-bottom: 20px;">Escanear Voucher</button>
+    <div id="reader-equip" style="margin-bottom: 20px;"></div>
+    <div id="reader-voucher" style="display:none;"></div>
+    <div id="voucher-area" style="display:none; margin-top:20px;">
+        Código do Voucher: <span id="voucher-codigo" style="font-weight:bold;"></span>
+        <button id="copiar-btn" style="display:inline-block; margin-left:10px; padding:6px 14px; font-size:0.95em; border-radius:6px; background:#333; color:#fff; border:none;">Copiar</button>
+        <span id="copiado-msg" style="display:none; color:green; margin-left:10px;">Voucher copiado!</span>
+    </div>
+    <div id="result">ID do Equipamento: <span id="codigo-display">Nenhum</span></div>
 
-    function onScanSuccess(decodedText, decodedResult) {
-      resultContainer.textContent = decodedText;
+    <script>
+        // Scanner de Equipamento (carregado por padrão)
+        let html5QrcodeScannerEquip = new Html5QrcodeScanner(
+            "reader-equip", { fps: 10, qrbox: 250 });
+        html5QrcodeScannerEquip.render(onScanSuccess);
 
-      fetch('/scanner/salvar/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: JSON.stringify({
-          codigo: decodedText,
-          tipo: decodedResult.result.format.formatName || 'desconhecido'
-        })
-      });
+        // Função para escanear equipamento
+        function onScanSuccess(decodedText, decodedResult) {
+            document.getElementById("codigo-display").textContent = decodedText;
+            fetch("/registrar/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ codigo: decodedText })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === "ok") {
+                    alert("Equipamento registrado com sucesso!");
+                } else {
+                    alert("Erro ao registrar: " + data.mensagem);
+                }
+            });
+            html5QrcodeScannerEquip.clear(); // Parar o scanner após o primeiro sucesso
+            // Recarregar o scanner após 2 segundos para novo scan
+            setTimeout(() => {
+                html5QrcodeScannerEquip.render(onScanSuccess);
+            }, 2000);
+        }
 
-      html5QrcodeScanner.clear();
-    }
+        // Voucher
+        let html5QrcodeScannerVoucher = null;
+        document.getElementById('scan-voucher-btn').onclick = function() {
+            document.getElementById('reader-equip').style.display = 'none';
+            document.getElementById('reader-voucher').style.display = 'block';
+            document.getElementById('voucher-area').style.display = 'none';
+            if (!html5QrcodeScannerVoucher) {
+                html5QrcodeScannerVoucher = new Html5QrcodeScanner(
+                    "reader-voucher", { fps: 10, qrbox: 250 });
+            }
+            html5QrcodeScannerVoucher.clear();
+            html5QrcodeScannerVoucher.render(onScanVoucherSuccess);
+        };
 
-    const html5QrcodeScanner = new Html5QrcodeScanner(
-      "reader", { fps: 10, qrbox: 250 });
+        function onScanVoucherSuccess(decodedText, decodedResult) {
+            document.getElementById('voucher-codigo').textContent = decodedText;
+            document.getElementById('voucher-area').style.display = 'block';
+            document.getElementById('reader-voucher').style.display = 'none';
+            document.getElementById('reader-equip').style.display = 'block';
+            if (html5QrcodeScannerVoucher) {
+                html5QrcodeScannerVoucher.clear();
+            }
+        }
 
-    html5QrcodeScanner.render(onScanSuccess);
-  </script>
+        document.getElementById('copiar-btn').onclick = function() {
+            const valor = document.getElementById('voucher-codigo').textContent;
+            navigator.clipboard.writeText(valor).then(() => {
+                document.getElementById('copiado-msg').style.display = 'inline';
+                setTimeout(() => {
+                    document.getElementById('copiado-msg').style.display = 'none';
+                }, 1500);
+            });
+        };
+    </script>
+
 </body>
 </html>

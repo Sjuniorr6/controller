@@ -1,18 +1,20 @@
-from django.shortcuts import render
 from django.http import JsonResponse
-from .models import CodigoEscaneado
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 import json
+from .models import Equipamento
 
-def scanner_view(request):
+def index(request):
     return render(request, 'scanner/scan.html')
 
 @csrf_exempt
-def salvar_codigo(request):
+def registrar_equipamento(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         codigo = data.get('codigo')
-        tipo = data.get('tipo')
-        CodigoEscaneado.objects.create(codigo=codigo, tipo=tipo)
-        return JsonResponse({'status': 'salvo com sucesso'})
-    return JsonResponse({'erro': 'requisição inválida'}, status=400)
+        if codigo:
+            equipamento, criado = Equipamento.objects.get_or_create(codigo=codigo)
+            return JsonResponse({'status': 'ok', 'criado': criado})
+        else:
+            return JsonResponse({'status': 'erro', 'mensagem': 'Código inválido'}, status=400)
+    return JsonResponse({'status': 'erro', 'mensagem': 'Método não permitido'}, status=405)

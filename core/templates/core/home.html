@@ -23,7 +23,13 @@
             </div>
         </div>
 
-      
+        <div class="card text-center shadow-lg">
+            <div class="card-body">
+                <i class="fa-solid fa-qrcode fa-3x text-success mb-3"></i>
+                <h5 class="card-title text-dark">Scanner QR Code</h5>
+                <p class="card-text text-muted">Acesse o scanner de equipamentos via QR Code.</p>
+                <a href="/scanner/" class="btn btn-success">Abrir Scanner</a>
+            </div>
         </div>
     </div>
 </div>
@@ -36,7 +42,7 @@
 
         .hero-container {
         width: 100%;
-        height: 700px;
+        min-height: 700px;
         background: url("{% static 'images/FundoHome.png' %}") no-repeat center center fixed;
         background-size: cover;
         position: relative;
@@ -52,12 +58,14 @@
         box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
         }
 
-/* Estilo para os cards dentro do hero-container */
         .hero-cards {
-            position: absolute;
-            bottom: -80px; /* Move os cards para a posição desejada */
             display: flex;
+            flex-direction: row;
             gap: 30px;
+            justify-content: center;
+            align-items: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
         }
 
         .hero-cards .card {
@@ -67,6 +75,17 @@
             transition: transform 0.3s ease-in-out;
             background: white;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+        .hero-cards .card-title {
+            font-size: 1.05rem;
+        }
+        .hero-cards .card-text {
+            font-size: 0.85rem;
+        }
+        .hero-cards .btn {
+            font-size: 0.85rem;
+            padding: 6px 14px;
         }
 
         .hero-cards .card:hover {
@@ -90,14 +109,24 @@
             background: #333;
         }
 
-        /* Estilo dos cards */
         .card {
-        width: 320px;
-        border-radius: 15px;
-        padding: 20px;
-        transition: transform 0.3s ease-in-out;
-        background: white;
-        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            width: 320px;
+            border-radius: 15px;
+            padding: 20px;
+            transition: transform 0.3s ease-in-out;
+            background: white;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-size: 1.05rem;
+        }
+        .card-text {
+            font-size: 0.85rem;
+        }
+        .btn {
+            font-size: 0.85rem;
+            padding: 6px 14px;
         }
 
         .card:hover {
@@ -111,6 +140,39 @@
             background: #f9f9f9;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (max-width: 600px) {
+            .hero-cards {
+                flex-direction: row;
+                gap: 8px;
+            }
+            .hero-cards .card, .card {
+                width: 38vw;
+                max-width: 130px;
+                min-width: 90px;
+                height: 38vw;
+                max-height: 130px;
+                min-height: 90px;
+                padding: 8px 4px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+            .hero-cards .card-title, .card-title {
+                font-size: 0.75rem;
+            }
+            .hero-cards .card-text, .card-text {
+                font-size: 0.65rem;
+            }
+            .hero-cards .btn, .btn {
+                font-size: 0.65rem;
+                padding: 3px 6px;
+            }
+            h1 {
+                font-size: 1.1rem;
+            }
         }
     </style>
 
