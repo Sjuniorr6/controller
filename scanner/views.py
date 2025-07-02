@@ -20,9 +20,20 @@ def registrar_equipamento(request):
                 codigos = [codigo]
             else:
                 return JsonResponse({'status': 'erro', 'mensagem': 'Nenhum código enviado.'}, status=400)
+        
+        # Dados do modal
+        peso_liquido = data.get('peso_liquido')
+        peso_bruto = data.get('peso_bruto')
+        medidas_caixa = data.get('medidas_caixa')
+        
         criados = []
         for codigo in codigos:
-            equipamento = Equipamento.objects.create(codigo=codigo)
+            equipamento = Equipamento.objects.create(
+                codigo=codigo,
+                peso_liquido=peso_liquido,
+                peso_bruto=peso_bruto,
+                medidas_caixa=medidas_caixa
+            )
             criados.append({'codigo': codigo, 'criado': True})
         return JsonResponse({
             'status': 'ok',

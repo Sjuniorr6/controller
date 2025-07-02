@@ -30,6 +30,54 @@
             padding: 10px 20px;
             font-size: 16px;
         }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 400px;
+            border-radius: 8px;
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .modal button {
+            margin: 5px;
+            padding: 8px 16px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: black;
+        }
     </style>
 </head>
 <body>
@@ -186,7 +234,108 @@
         </div>
         <button type="submit" style="margin-top: 10px;">Enviar</button>
     </form>
+
+    <!-- Modal para informações adicionais -->
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="fecharModal()">&times;</span>
+            <h3>Informações Adicionais</h3>
+            <form id="modalForm">
+                <label for="peso_liquido">Peso Líquido (kg):</label>
+                <input type="text" id="peso_liquido" name="peso_liquido" placeholder="Ex: 10,5 ou 10.5" pattern="[0-9]*[.,]?[0-9]+">
+                
+                <label for="peso_bruto">Peso Bruto (kg):</label>
+                <input type="text" id="peso_bruto" name="peso_bruto" placeholder="Ex: 12,0 ou 12.0" pattern="[0-9]*[.,]?[0-9]+">
+                
+                <label for="medidas_caixa">Medidas da Caixa:</label>
+                <input type="text" id="medidas_caixa" name="medidas_caixa" placeholder="Ex: 30x20x15cm">
+                
+                <div style="text-align: center; margin-top: 20px;">
+                    <button type="button" onclick="enviarComModal()">Salvar</button>
+                    <button type="button" onclick="fecharModal()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <script>
+    // Variáveis globais para armazenar os códigos
+    let codigosParaEnviar = [];
+
+    // Funções do modal
+    function abrirModal() {
+        document.getElementById('infoModal').style.display = 'block';
+    }
+
+    function fecharModal() {
+        document.getElementById('infoModal').style.display = 'none';
+        // Limpar campos do modal
+        document.getElementById('peso_liquido').value = '';
+        document.getElementById('peso_bruto').value = '';
+        document.getElementById('medidas_caixa').value = '';
+    }
+
+    function enviarComModal() {
+        let pesoLiquido = document.getElementById('peso_liquido').value;
+        let pesoBruto = document.getElementById('peso_bruto').value;
+        const medidasCaixa = document.getElementById('medidas_caixa').value;
+
+        // Converter vírgula para ponto nos campos de peso
+        if (pesoLiquido) {
+            pesoLiquido = pesoLiquido.replace(',', '.');
+            // Validar se é um número válido
+            if (isNaN(parseFloat(pesoLiquido))) {
+                alert('Peso líquido deve ser um número válido (ex: 10,5 ou 10.5)');
+                return;
+            }
+        }
+        if (pesoBruto) {
+            pesoBruto = pesoBruto.replace(',', '.');
+            // Validar se é um número válido
+            if (isNaN(parseFloat(pesoBruto))) {
+                alert('Peso bruto deve ser um número válido (ex: 12,0 ou 12.0)');
+                return;
+            }
+        }
+
+        const dados = {
+            codigos: codigosParaEnviar,
+            peso_liquido: pesoLiquido || null,
+            peso_bruto: pesoBruto || null,
+            medidas_caixa: medidasCaixa || null
+        };
+
+        fetch(window.location.origin + "/scanner/registrar/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(dados)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log("Resposta do backend:", data);
+            if (data.status === "ok") {
+                alert("Equipamentos registrados com sucesso!");
+                fecharModal();
+                // Limpar formulário
+                document.getElementById('form-dinamico').reset();
+                const container = document.getElementById('campos-container');
+                container.innerHTML = `
+                    <div class="campo-item" style="margin-bottom: 8px;">
+                        <input type="text" name="campo[]" placeholder="Digite algo..." style="padding: 6px; width: 180px;">
+                        <button type="button" class="btn-add-campo" onclick="adicionarCampo(this)">+</button>
+                    </div>
+                `;
+            } else {
+                alert("Erro ao registrar: " + data.mensagem);
+            }
+        })
+        .catch(error => {
+            console.error("Erro na requisição fetch:", error);
+            alert("Erro ao enviar dados para o backend.");
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('form-dinamico').onsubmit = function(e) {
             e.preventDefault();
@@ -198,27 +347,19 @@
                 alert("Preencha pelo menos um campo!");
                 return;
             }
-            fetch(window.location.origin + "/scanner/registrar/", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ codigos: campos })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log("Resposta do backend:", data);
-                if (data.status === "ok") {
-                    alert("Códigos registrados com sucesso!");
-                } else {
-                    alert("Erro ao registrar: " + data.mensagem);
-                }
-            })
-            .catch(error => {
-                console.error("Erro na requisição fetch:", error);
-                alert("Erro ao enviar dados para o backend.");
-            });
+            
+            // Armazenar códigos e abrir modal
+            codigosParaEnviar = campos;
+            abrirModal();
         };
+
+        // Fechar modal quando clicar fora dele
+        window.onclick = function(event) {
+            const modal = document.getElementById('infoModal');
+            if (event.target == modal) {
+                fecharModal();
+            }
+        }
     });
     </script>
 
