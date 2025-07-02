@@ -1,34 +1,199 @@
-<!DOCTYPE html>
-<html>
+{% extends "base.html" %}
+{% block title %}Equipamentos{% endblock %}
+
+{% block content %}
 <head>
-    <title>Scanner de Equipamentos</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner de Equipamentos - T42</title>
     <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            text-align: center;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
             padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #7f8c8d;
+            font-weight: 400;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .scanner-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            border: 1px solid #ffeaa7;
+        }
+
+        .warning-box strong {
+            font-weight: 600;
         }
 
         #preview {
             width: 100%;
             max-width: 400px;
-            border-radius: 10px;
-            border: 2px solid #ccc;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
             margin: 20px auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: #f8f9fa;
         }
 
-        #result {
-            margin-top: 20px;
-            font-size: 20px;
-            font-weight: bold;
+        .camera-controls {
+            margin: 20px 0;
         }
 
-        button {
-            margin-top: 10px;
-            padding: 10px 20px;
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
             font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 25px;
+            margin-top: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .form-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .campo-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .campo-item input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            background: white;
+        }
+
+        .campo-item input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .btn-add-campo {
+            background: #27ae60;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-add-campo:hover {
+            background: #229954;
+            transform: scale(1.05);
+        }
+
+        .btn-submit {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .btn-submit:hover {
+            background: #229954;
+            transform: translateY(-1px);
         }
 
         /* Modal styles */
@@ -40,53 +205,169 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(5px);
         }
 
         .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 400px;
+            background: white;
+            margin: 10% auto;
+            padding: 30px;
             border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            position: relative;
+            animation: modalSlideIn 0.3s ease-out;
+            border: 1px solid #e9ecef;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal h3 {
+            color: #2c3e50;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .modal label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+            font-size: 0.95rem;
         }
 
         .modal input {
             width: 100%;
-            padding: 8px;
-            margin: 8px 0;
+            padding: 12px 16px;
+            margin-bottom: 20px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            box-sizing: border-box;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            background: white;
         }
 
-        .modal button {
-            margin: 5px;
-            padding: 8px 16px;
+        .modal input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .modal .btn {
+            flex: 1;
+            max-width: 150px;
         }
 
         .close {
-            color: #aaa;
-            float: right;
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            color: #6c757d;
             font-size: 28px;
             font-weight: bold;
             cursor: pointer;
+            transition: color 0.3s ease;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
         }
 
         .close:hover {
-            color: black;
+            color: #dc3545;
+            background: #f8f9fa;
+        }
+
+        .camera-select {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            margin: 10px;
+            background: white;
+        }
+
+        .camera-select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+            
+            .modal-content {
+                margin: 5% auto;
+                padding: 20px;
+            }
+            
+            .modal-buttons {
+                flex-direction: column;
+            }
+            
+            .modal .btn {
+                max-width: none;
+            }
+        }
+
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
+    <div class="container">
+        <div class="header">
+            <h1>Scanner de Equipamentos</h1>
+            <p>Sistema de registro e controle de equipamentos via QR Code</p>
+        </div>
 
-    <h2>Scanner de Equipamento (QR Code)</h2>
-    <div style="color: #b00; font-size: 0.95em; margin-bottom: 10px;">
-        Para usar a câmera, acesse este site via <b>HTTPS</b> ou <b>localhost</b>.<br>
-        O navegador bloqueia a câmera em HTTP por segurança.
-    </div>
+        <div class="card">
+            <div class="scanner-section">
 
     <script>
     function isIOS() {
@@ -97,8 +378,10 @@
     }
 
     if (isIOS() && isSafari()) {
-        document.write('<button onclick="abrirCameraTraseira()">Iniciar Scanner Traseiro (iOS/Safari)</button>');
-        document.write('<video id="preview" autoplay playsinline style="width:100%;max-width:400px;"></video>');
+        document.write('<div class="camera-controls">');
+        document.write('<button class="btn" onclick="abrirCameraTraseira()">📷 Iniciar Scanner Traseiro (iOS/Safari)</button>');
+        document.write('</div>');
+        document.write('<video id="preview" autoplay playsinline></video>');
         document.write('<canvas id="canvas" style="display:none;"></canvas>');
         let scanning = false;
         window.abrirCameraTraseira = function() {
@@ -140,9 +423,11 @@
             }
         }
     } else {
+        document.write('<div class="camera-controls">');
         document.write('<label for="camera-select">Escolha a câmera:</label>');
-        document.write('<select id="camera-select" style="margin-bottom:10px;"></select>');
-        document.write('<button onclick="iniciarScanner()">Iniciar Scanner</button>');
+        document.write('<select id="camera-select" class="camera-select"></select>');
+        document.write('<button class="btn" onclick="iniciarScanner()">Iniciar Scanner</button>');
+        document.write('</div>');
         document.write('<video id="preview"></video>');
         let scanner = null;
         let camerasDisponiveis = [];
@@ -191,14 +476,13 @@
             }
         }
     }
-    // Funções do formulário dinâmico (mantém igual)
+    // Funções do formulário dinâmico
     function adicionarCampo(botao) {
         const container = document.getElementById('campos-container');
         const novoCampo = document.createElement('div');
         novoCampo.className = 'campo-item';
-        novoCampo.style.marginBottom = '8px';
         novoCampo.innerHTML = `
-            <input type="text" name="campo[]" placeholder="Digite algo..." style="padding: 6px; width: 180px;">
+            <input type="text" name="campo[]" placeholder="Digite o código do equipamento...">
             <button type="button" class="btn-add-campo" onclick="adicionarCampo(this)">+</button>
         `;
         container.appendChild(novoCampo);
@@ -225,15 +509,18 @@
     </script>
 
     <!-- Formulário dinâmico -->
-    <form id="form-dinamico" style="margin-top: 30px; text-align: left; display: inline-block;">
-        <div id="campos-container">
-            <div class="campo-item" style="margin-bottom: 8px;">
-                <input type="text" name="campo[]" placeholder="Digite algo..." style="padding: 6px; width: 180px;">
-                <button type="button" class="btn-add-campo" onclick="adicionarCampo(this)">+</button>
+    <div class="form-section">
+                        <div class="form-title">Registro de Equipamentos</div>
+        <form id="form-dinamico">
+            <div id="campos-container">
+                <div class="campo-item">
+                    <input type="text" name="campo[]" placeholder="Digite o código do equipamento...">
+                    <button type="button" class="btn-add-campo" onclick="adicionarCampo(this)">+</button>
+                </div>
             </div>
-        </div>
-        <button type="submit" style="margin-top: 10px;">Enviar</button>
-    </form>
+            <button type="submit" class="btn-submit">Enviar</button>
+        </form>
+    </div>
 
     <!-- Modal para informações adicionais -->
     <div id="infoModal" class="modal">
@@ -250,9 +537,9 @@
                 <label for="medidas_caixa">Medidas da Caixa:</label>
                 <input type="text" id="medidas_caixa" name="medidas_caixa" placeholder="Ex: 30x20x15cm">
                 
-                <div style="text-align: center; margin-top: 20px;">
-                    <button type="button" onclick="enviarComModal()">Salvar</button>
-                    <button type="button" onclick="fecharModal()">Cancelar</button>
+                <div class="modal-buttons">
+                    <button type="button" class="btn btn-success" onclick="enviarComModal()">Salvar</button>
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
                 </div>
             </form>
         </div>
@@ -321,8 +608,8 @@
                 document.getElementById('form-dinamico').reset();
                 const container = document.getElementById('campos-container');
                 container.innerHTML = `
-                    <div class="campo-item" style="margin-bottom: 8px;">
-                        <input type="text" name="campo[]" placeholder="Digite algo..." style="padding: 6px; width: 180px;">
+                    <div class="campo-item">
+                        <input type="text" name="campo[]" placeholder="Digite o código do equipamento...">
                         <button type="button" class="btn-add-campo" onclick="adicionarCampo(this)">+</button>
                     </div>
                 `;
@@ -364,4 +651,4 @@
     </script>
 
 </body>
-</html>
+{% endblock %}
