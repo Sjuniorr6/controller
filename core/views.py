@@ -576,47 +576,117 @@ import json
 
 # Dicionário de controle (para simulação de memória temporária)
 from django.core.cache import cache
+from .equipament_cnfig import EQUIPMENT_GUIDS
 
 def verificar_fdoor(request):
+    """
+    Verifica status de porta e luminosidade em lote para todos os equipamentos
+    """
     url = 'http://cloud.assetscontrols.com:8092/OpenApi/LBS'
+    
+    # Usa todos os GUIDs disponíveis
+    guids_string = ','.join(EQUIPMENT_GUIDS)
+    
     payload = {
         'FAction': 'QueryLBSMonitorListByFGUIDs',
         'FTokenID': '7e88e035-285a-4f7d-8e63-8b403d04dcfa',
-        'FGUIDs': 'f0d11885-b7db-4565-a7d1-14f3e8faa362',
+        'FGUIDs': guids_string,
         'FDateType': 2
     }
 
-    try:
-        response = requests.post(url, json=payload)
-        data = response.json()
+    # Sistema de retry para tornar mais robusto
+    max_retries = 3
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            print(f"🔍 Consultando todos os equipamentos (tentativa {retry_count + 1}/{max_retries})")
+            print(f"📊 Total de equipamentos: {len(EQUIPMENT_GUIDS)}")
+            
+            # Timeout aumentado para lidar com muitos equipamentos
+            response = requests.post(url, json=payload, timeout=30)
+            data = response.json()
 
-        if data['Result'] == 200 and data['FObject']:
-            equipamento = data['FObject'][0]
-            status = int(equipamento.get('FDoor', -1))
-            nome = equipamento.get('FVehicleName', 'Equipamento desconhecido')
-            guid = equipamento.get('FAssetID')
-            fdesc_raw = equipamento.get("FExpandProto", {}).get("FDesc", "")
-            fdesc = json.loads(fdesc_raw) if fdesc_raw else {}
-            flx = float(fdesc.get("fLx", -1))
+            eventos_detectados = []
+            
+            if data['Result'] == 200 and data['FObject']:
+                for equipamento in data['FObject']:
+                    status = int(equipamento.get('FDoor', -1))
+                    nome = equipamento.get('FVehicleName', 'Equipamento desconhecido')
+                    guid = equipamento.get('FAssetID')
+                    fdesc_raw = equipamento.get("FExpandProto", {}).get("FDesc", "")
+                    fdesc = json.loads(fdesc_raw) if fdesc_raw else {}
+                    flx = float(fdesc.get("fLx", -1))
 
-            # Verifica estado anterior da porta
-            ultimo_status = cache.get(f'ultimo_status_{guid}')
-            cache.set(f'ultimo_status_{guid}', status, timeout=3600)
+                    # Verifica estado anterior da porta
+                    ultimo_status = cache.get(f'ultimo_status_{guid}')
+                    cache.set(f'ultimo_status_{guid}', status, timeout=1800)  # 30 minutos
 
-            if status == 1 and ultimo_status != 1:
-                return JsonResponse({'evento': 'aberta', 'equipamento': nome})
-            elif status == 0 and ultimo_status == 1:
-                return JsonResponse({'evento': 'fechada', 'equipamento': nome})
+                    # Debug: Log dos status (apenas se houver mudança)
+                    if ultimo_status != status:
+                        print(f"🔍 {nome} (GUID: {guid}): Status atual: {status}, Status anterior: {ultimo_status}")
 
-            # Verifica luminosidade
-            if flx > 15 and not cache.get(f'alerta_luz_{guid}'):
-                cache.set(f'alerta_luz_{guid}', True, timeout=3600)
-                return JsonResponse({'evento': 'luz', 'equipamento': nome, 'valor': flx})
+                    # Verifica mudança de status da porta
+                    if status == 1 and ultimo_status != 1:
+                        print(f"🚨 PORTA ABERTA detectada: {nome}")
+                        eventos_detectados.append({
+                            'evento': 'aberta',
+                            'equipamento': nome,
+                            'guid': guid
+                        })
+                    elif status == 0 and ultimo_status == 1:
+                        print(f"✅ PORTA FECHADA detectada: {nome}")
+                        eventos_detectados.append({
+                            'evento': 'fechada',
+                            'equipamento': nome,
+                            'guid': guid
+                        })
+                    # Adiciona verificação para porta fechada na primeira vez (quando ultimo_status é None)
+                    elif status == 0 and ultimo_status is None:
+                        print(f"✅ PORTA FECHADA detectada (primeira vez): {nome}")
+                        eventos_detectados.append({
+                            'evento': 'fechada',
+                            'equipamento': nome,
+                            'guid': guid
+                        })
 
-    except Exception as e:
-        print("Erro ao consultar a API:", e)
+                    # Verifica luminosidade (timeout reduzido para 5 minutos)
+                    if flx > 15 and not cache.get(f'alerta_luz_{guid}'):
+                        cache.set(f'alerta_luz_{guid}', True, timeout=300)  # 5 minutos
+                        eventos_detectados.append({
+                            'evento': 'luz',
+                            'equipamento': nome,
+                            'guid': guid,
+                            'valor': flx
+                        })
 
-    return JsonResponse({'evento': 'nenhum', 'equipamento': ''})
+            # Retorna todos os eventos detectados
+            if eventos_detectados:
+                return JsonResponse({
+                    'eventos': eventos_detectados,
+                    'total_eventos': len(eventos_detectados),
+                    'total_equipamentos': len(EQUIPMENT_GUIDS)
+                })
+            else:
+                return JsonResponse({
+                    'eventos': [],
+                    'total_eventos': 0,
+                    'total_equipamentos': len(EQUIPMENT_GUIDS),
+                    'mensagem': 'Nenhum evento detectado'
+                })
+
+        except Exception as e:
+            retry_count += 1
+            print(f"❌ Erro ao consultar a API (tentativa {retry_count}/{max_retries}): {e}")
+            
+            if retry_count >= max_retries:
+                return JsonResponse({
+                    'error': f'Erro ao consultar a API após {max_retries} tentativas: {str(e)}'
+                }, status=500)
+            
+            # Aguarda antes de tentar novamente
+            import time
+            time.sleep(2)
 
 def update_t42_data(request, unit_id):
     """Atualiza dados de um equipamento T42 na API Golden via proxy (evita CORS)"""

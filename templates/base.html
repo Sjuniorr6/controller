@@ -62,69 +62,116 @@
             margin-right: 8px;
         }
 
-        /* Estilos para os popups de alerta */
-        .custom-popup {
+        /* Estilos para a lista de alertas */
+        .alertas-popup {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
             color: white;
             padding: 30px;
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
             z-index: 10000;
-            max-width: 400px;
+            max-width: 600px;
             width: 90%;
-            text-align: center;
+            max-height: 80vh;
+            overflow-y: auto;
             animation: popupSlideIn 0.5s ease-out;
             border: 2px solid rgba(255, 255, 255, 0.2);
         }
 
-        .custom-popup.porta-aberta {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
-            border: 2px solid #ff4757;
+        .alertas-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
         }
 
-        .custom-popup.porta-fechada {
-            background: linear-gradient(135deg, #2ed573 0%, #1e90ff 100%);
-            border: 2px solid #2ed573;
-        }
-
-        .custom-popup.luminosidade {
-            background: linear-gradient(135deg, #ffa726 0%, #ff7043 100%);
-            border: 2px solid #ff9800;
-        }
-
-        .popup-icon {
-            font-size: 3rem;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .popup-title {
-            font-size: 1.5rem;
+        .alertas-title {
+            font-size: 1.8rem;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
-        .popup-message {
+        .alertas-subtitle {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+
+        .alertas-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .alerta-item {
+            background: rgba(255, 255, 255, 0.1);
+            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid;
+            display: flex;
+            align-items: center;
+            animation: alertaSlideIn 0.3s ease-out;
+        }
+
+        .alerta-item.porta-aberta {
+            border-left-color: #ff4757;
+            background: rgba(255, 71, 87, 0.1);
+        }
+
+        .alerta-item.porta-fechada {
+            border-left-color: #2ed573;
+            background: rgba(46, 213, 115, 0.1);
+        }
+
+        .alerta-item.luminosidade {
+            border-left-color: #ffa726;
+            background: rgba(255, 167, 38, 0.1);
+        }
+
+        .alerta-icon {
+            font-size: 1.5rem;
+            margin-right: 15px;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .alerta-content {
+            flex: 1;
+        }
+
+        .alerta-equipamento {
+            font-weight: bold;
             font-size: 1.1rem;
-            margin-bottom: 20px;
-            line-height: 1.4;
+            margin-bottom: 5px;
+        }
+
+        .alerta-descricao {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .alerta-valor {
+            font-weight: bold;
+            color: #ffa726;
         }
 
         .popup-close {
             background: rgba(255, 255, 255, 0.2);
             border: 2px solid rgba(255, 255, 255, 0.3);
             color: white;
-            padding: 10px 25px;
+            padding: 12px 30px;
             border-radius: 25px;
             cursor: pointer;
             font-weight: bold;
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
+            margin-top: 20px;
+            width: 100%;
         }
 
         .popup-close:hover {
@@ -143,6 +190,17 @@
             background: rgba(0, 0, 0, 0.5);
             z-index: 9999;
             animation: overlayFadeIn 0.3s ease-out;
+        }
+
+        @keyframes alertaSlideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
         }
 
         @keyframes popupSlideIn {
@@ -167,21 +225,35 @@
 
         /* Responsividade para mobile */
         @media (max-width: 768px) {
-            .custom-popup {
+            .alertas-popup {
                 padding: 20px;
-                max-width: 90%;
+                max-width: 95%;
+                max-height: 85vh;
             }
             
-            .popup-icon {
-                font-size: 2.5rem;
+            .alertas-title {
+                font-size: 1.5rem;
             }
             
-            .popup-title {
-                font-size: 1.3rem;
+            .alertas-subtitle {
+                font-size: 0.9rem;
             }
             
-            .popup-message {
+            .alerta-item {
+                padding: 12px;
+            }
+            
+            .alerta-equipamento {
                 font-size: 1rem;
+            }
+            
+            .alerta-descricao {
+                font-size: 0.8rem;
+            }
+            
+            .alerta-icon {
+                font-size: 1.2rem;
+                margin-right: 10px;
             }
         }
     </style>
@@ -189,11 +261,116 @@
 
 <audio id="alarme-audio" src="/static/som-alerta.mp3" preload="auto"></audio>
 <script>
-let statusAtual = null;
+// Controle de estados anteriores para evitar repetições
+let estadosAnteriores = new Map(); // guid -> { porta: status, luminosidade: valor }
+let alertasAtivos = new Set(); // Para controlar alertas já mostrados
 
-function showCustomPopup(type, message, equipamento, valor = null) {
+// Função para limpar cache quando trocar de tela
+function limparCacheAlertas() {
+  estadosAnteriores.clear();
+  alertasAtivos.clear();
+  console.log("🧹 Cache de alertas limpo");
+  
+  // Mostra notificação visual
+  const notification = document.createElement('div');
+  notification.textContent = '🧹 Cache de alertas limpo!';
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #3742fa;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    z-index: 10002;
+    font-size: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  `;
+  document.body.appendChild(notification);
+  
+  // Remove a notificação após 3 segundos
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.parentNode.removeChild(notification);
+    }
+  }, 3000);
+}
+
+// Função para limpar cache silenciosamente (sem mostrar todos os alertas)
+function limparCacheSilencioso() {
+  estadosAnteriores.clear();
+  alertasAtivos.clear();
+  console.log("🧹 Cache de alertas limpo silenciosamente");
+}
+
+// Função para mostrar status atual de todos os equipamentos
+function mostrarStatusAtual() {
+  console.log("📊 Status atual dos equipamentos:");
+  console.log(estadosAnteriores);
+  
+  let statusText = "📊 Status Atual dos Equipamentos:\n\n";
+  
+  if (estadosAnteriores.size === 0) {
+    statusText += "Nenhum equipamento monitorado ainda.";
+  } else {
+    estadosAnteriores.forEach((estado, guid) => {
+      const portaStatus = estado.porta === null ? "❓ Desconhecido" : 
+                         estado.porta === 1 ? "🚪 Aberta" : "🔒 Fechada";
+      const luzStatus = estado.luminosidade === null ? "❓ Desconhecido" : 
+                       `${estado.luminosidade} lux`;
+      
+      statusText += `GUID: ${guid.substring(0, 8)}...\n`;
+      statusText += `  Porta: ${portaStatus}\n`;
+      statusText += `  Luminosidade: ${luzStatus}\n\n`;
+    });
+  }
+  
+  // Mostra em um popup
+  const popup = document.createElement('div');
+  popup.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border: 2px solid #3742fa;
+    border-radius: 10px;
+    padding: 20px;
+    z-index: 10003;
+    max-width: 500px;
+    max-height: 400px;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  `;
+  
+  popup.innerHTML = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+      <h3 style="margin: 0; color: #3742fa;">Status Atual</h3>
+      <button onclick="this.parentElement.parentElement.remove()" style="background: #ff6b6b; color: white; border: none; border-radius: 3px; padding: 5px 10px; cursor: pointer;">✕</button>
+    </div>
+    <pre style="white-space: pre-wrap; font-family: monospace; font-size: 12px; margin: 0;">${statusText}</pre>
+  `;
+  
+  document.body.appendChild(popup);
+}
+
+// Limpa cache quando a página é carregada/recarregada
+window.addEventListener('load', limparCacheSilencioso);
+window.addEventListener('beforeunload', limparCacheSilencioso);
+
+// Limpa cache quando há mudança de URL (navegação)
+let currentUrl = window.location.href;
+setInterval(() => {
+  if (window.location.href !== currentUrl) {
+    currentUrl = window.location.href;
+    limparCacheSilencioso();
+  }
+}, 1000);
+
+function showAlertasLista(eventos) {
   // Remove popup anterior se existir
-  const existingPopup = document.querySelector('.custom-popup');
+  const existingPopup = document.querySelector('.alertas-popup');
   const existingOverlay = document.querySelector('.popup-overlay');
   if (existingPopup) existingPopup.remove();
   if (existingOverlay) existingOverlay.remove();
@@ -203,86 +380,334 @@ function showCustomPopup(type, message, equipamento, valor = null) {
   overlay.className = 'popup-overlay';
   document.body.appendChild(overlay);
 
-  // Cria popup
+  // Cria popup da lista
   const popup = document.createElement('div');
-  popup.className = `custom-popup ${type}`;
+  popup.className = 'alertas-popup';
 
-  let icon, title, content;
+  // Filtra apenas eventos que representam mudanças reais
+  const eventosFiltrados = eventos.filter(evento => {
+    const guid = evento.guid;
+    const estadoAnterior = estadosAnteriores.get(guid) || { porta: null, luminosidade: null };
+    
+    console.log(`🔍 Filtrando evento: ${evento.evento} para ${evento.equipamento} (GUID: ${guid})`);
+    console.log(`📊 Estado anterior:`, estadoAnterior);
+    
+    if (evento.evento === 'aberta' || evento.evento === 'fechada') {
+      const novoStatus = evento.evento === 'aberta' ? 1 : 0;
+      console.log(`🚪 Novo status da porta: ${novoStatus}, Status anterior: ${estadoAnterior.porta}`);
+      
+      // Se é a primeira vez que vemos este equipamento, apenas registra o estado sem mostrar alerta
+      if (estadoAnterior.porta === null) {
+        estadosAnteriores.set(guid, { ...estadoAnterior, porta: novoStatus });
+        console.log(`📝 Estado inicial registrado para ${evento.equipamento}: porta ${evento.evento}`);
+        return false; // Não mostra alerta na primeira vez
+      }
+      
+      // Só mostra alerta se houve mudança real de status
+      if (estadoAnterior.porta !== novoStatus) {
+        estadosAnteriores.set(guid, { ...estadoAnterior, porta: novoStatus });
+        console.log(`✅ Evento de porta ${evento.evento} ACEITO (mudança real)`);
+        return true;
+      } else {
+        console.log(`❌ Evento de porta ${evento.evento} REJEITADO (sem mudança)`);
+        return false;
+      }
+    }
+    
+    if (evento.evento === 'luz') {
+      console.log(`💡 Luminosidade: ${evento.valor}, Valor anterior: ${estadoAnterior.luminosidade}`);
+      
+      // Se é a primeira vez que vemos luminosidade deste equipamento, apenas registra
+      if (estadoAnterior.luminosidade === null) {
+        estadosAnteriores.set(guid, { ...estadoAnterior, luminosidade: evento.valor });
+        console.log(`📝 Estado inicial de luminosidade registrado para ${evento.equipamento}: ${evento.valor}`);
+        return false; // Não mostra alerta na primeira vez
+      }
+      
+      // Só mostra alerta se houve mudança real
+      if (estadoAnterior.luminosidade !== evento.valor) {
+        estadosAnteriores.set(guid, { ...estadoAnterior, luminosidade: evento.valor });
+        console.log(`✅ Evento de luminosidade ACEITO (mudança real)`);
+        return true;
+      } else {
+        console.log(`❌ Evento de luminosidade REJEITADO (sem mudança)`);
+        return false;
+      }
+    }
+    
+    console.log(`❓ Evento desconhecido: ${evento.evento}`);
+    return false;
+  });
+
+  console.log(`📋 Total de eventos recebidos: ${eventos.length}`);
+  console.log(`✅ Eventos filtrados (mudanças reais): ${eventosFiltrados.length}`);
   
-  switch(type) {
-    case 'porta-aberta':
-      icon = '🚨';
-      title = 'ALERTA: PORTA ABERTA';
-      content = `Equipamento: <strong>${equipamento}</strong>`;
-      break;
-    case 'porta-fechada':
-      icon = '✅';
-      title = 'PORTA FECHADA';
-      content = `Equipamento: <strong>${equipamento}</strong>`;
-      break;
-    case 'luminosidade':
-      icon = '💡';
-      title = 'ALERTA: LUMINOSIDADE';
-      content = `Equipamento: <strong>${equipamento}</strong><br>Valor: <strong>${valor}</strong>`;
-      break;
-    default:
-      icon = 'ℹ️';
-      title = 'INFORMAÇÃO';
-      content = message;
+  // Se não há eventos filtrados, não mostra popup
+  if (eventosFiltrados.length === 0) {
+    console.log(`❌ Nenhum evento filtrado, removendo overlay`);
+    overlay.remove();
+    return;
   }
 
+  // Gera HTML da lista
+  let alertasHTML = '';
+  eventosFiltrados.forEach(evento => {
+    let icon, descricao, classe;
+    
+    switch(evento.evento) {
+      case 'aberta':
+        icon = '🚨';
+        descricao = 'Porta aberta detectada';
+        classe = 'porta-aberta';
+        break;
+      case 'fechada':
+        icon = '✅';
+        descricao = 'Porta fechada';
+        classe = 'porta-fechada';
+        break;
+      case 'luz':
+        icon = '💡';
+        descricao = `Luminosidade alta: <span class="alerta-valor">${evento.valor} lux</span>`;
+        classe = 'luminosidade';
+        break;
+    }
+
+    alertasHTML += `
+      <li class="alerta-item ${classe}">
+        <div class="alerta-icon">${icon}</div>
+        <div class="alerta-content">
+          <div class="alerta-equipamento">${evento.equipamento}</div>
+          <div class="alerta-descricao">${descricao}</div>
+        </div>
+      </li>
+    `;
+  });
+
   popup.innerHTML = `
-    <span class="popup-icon">${icon}</span>
-    <div class="popup-title">${title}</div>
-    <div class="popup-message">${content}</div>
-    <button class="popup-close" onclick="closePopup()">Fechar</button>
+    <div class="alertas-header">
+      <div class="alertas-title">🚨 ALERTAS DETECTADOS</div>
+      <div class="alertas-subtitle">${eventosFiltrados.length} evento(s) encontrado(s)</div>
+    </div>
+    <ul class="alertas-list">
+      ${alertasHTML}
+    </ul>
+    <button class="popup-close" onclick="closeAlertasPopup()">Fechar</button>
   `;
 
   document.body.appendChild(popup);
 
-  // Auto-close após 8 segundos
+  // Auto-close após 8 segundos (mais rápido)
   setTimeout(() => {
-    closePopup();
+    closeAlertasPopup();
   }, 8000);
 }
 
-function closePopup() {
-  const popup = document.querySelector('.custom-popup');
+function closeAlertasPopup() {
+  const popup = document.querySelector('.alertas-popup');
   const overlay = document.querySelector('.popup-overlay');
   if (popup) popup.remove();
   if (overlay) overlay.remove();
 }
 
 function verificarPorta() {
+  // Adiciona timestamp para evitar requisições simultâneas
+  if (verificarPorta.isRunning) {
+    console.log("⏳ Verificação já em andamento, pulando...");
+    return;
+  }
+  
+  verificarPorta.isRunning = true;
+  
   fetch("{% url 'verificar_fdoor' %}")
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response.json();
+    })
     .then(data => {
       const audio = document.getElementById("alarme-audio");
 
-      if (data.evento === 'aberta') {
-        if (audio) {
-          audio.play().catch(err => console.log("Erro ao tocar som:", err));
-        }
-        showCustomPopup('porta-aberta', '', data.equipamento);
+      // Debug: Log da resposta completa
+      console.log("📡 Resposta da API:", data);
+
+      // Atualiza status para sucesso
+      if (window.updateStatusSuccess) {
+        window.updateStatusSuccess();
       }
 
-      if (data.evento === 'fechada') {
+      // Verifica se há eventos na resposta
+      if (data.eventos && data.eventos.length > 0) {
+        console.log("🎯 Eventos recebidos:", data.eventos);
+        
+        // Toca o som apenas uma vez se houver eventos
         if (audio) {
           audio.play().catch(err => console.log("Erro ao tocar som:", err));
         }
-        showCustomPopup('porta-fechada', '', data.equipamento);
+        
+        // Mostra lista de alertas com filtro de repetições
+        showAlertasLista(data.eventos);
       }
-
-      if (data.evento === 'luz') {
-        if (audio) {
-          audio.play().catch(err => console.log("Erro ao tocar som:", err));
-        }
-        showCustomPopup('luminosidade', '', data.equipamento, data.valor);
+      
+      // Log para debug (opcional)
+      if (data.total_eventos > 0) {
+        console.log(`Detectados ${data.total_eventos} eventos`);
       }
+    })
+    .catch(error => {
+      console.error("Erro ao verificar porta:", error);
+      
+      // Atualiza status para erro
+      if (window.updateStatusError) {
+        window.updateStatusError();
+      }
+    })
+    .finally(() => {
+      verificarPorta.isRunning = false;
     });
 }
 
-setInterval(verificarPorta, 15000); // Verifica a cada 15 segundos
+// Inicia verificação automática a cada 10 segundos (mais estável)
+setInterval(verificarPorta, 10000);
+
+// Primeira verificação imediata
+setTimeout(verificarPorta, 1000);
+
+// Verificação extra rápida para eventos críticos (a cada 5 segundos)
+let verificacaoRapida = setInterval(() => {
+  // Só faz verificação rápida se não houver popup ativo
+  const popupAtivo = document.querySelector('.alertas-popup');
+  if (!popupAtivo) {
+    verificarPorta();
+  }
+}, 5000);
+
+// Função de teste para simular eventos de porta fechada
+function testarPortaFechada() {
+  console.log("🧪 TESTE: Simulando evento de porta fechada");
+  
+  const eventoTeste = {
+    eventos: [
+      {
+        evento: 'fechada',
+        equipamento: 'TESTE - Equipamento 001',
+        guid: 'test-guid-001'
+      }
+    ],
+    total_eventos: 1,
+    total_equipamentos: 533
+  };
+  
+  showAlertasLista(eventoTeste.eventos);
+}
+
+// Adiciona indicador de status e botão de teste
+setTimeout(() => {
+  // Indicador de status
+  const statusIndicator = document.createElement('div');
+  statusIndicator.id = 'status-indicator';
+  statusIndicator.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10001;
+    padding: 8px 12px;
+    background: #2ed573;
+    color: white;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  `;
+  statusIndicator.textContent = '🟢 SISTEMA ATIVO';
+  document.body.appendChild(statusIndicator);
+
+  // Botão de teste
+  const testButton = document.createElement('button');
+  testButton.textContent = '🧪 Testar Porta Fechada';
+  testButton.style.cssText = `
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    z-index: 10001;
+    padding: 10px;
+    background: #ff6b6b;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+  `;
+  testButton.onclick = testarPortaFechada;
+  document.body.appendChild(testButton);
+
+  // Botão para limpar cache
+  const clearCacheButton = document.createElement('button');
+  clearCacheButton.textContent = '🧹 Limpar Cache';
+  clearCacheButton.style.cssText = `
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    z-index: 10001;
+    padding: 10px;
+    background: #3742fa;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+  `;
+  clearCacheButton.onclick = limparCacheAlertas;
+  document.body.appendChild(clearCacheButton);
+
+  // Botão para mostrar estado atual
+  const statusButton = document.createElement('button');
+  statusButton.textContent = '📊 Status Atual';
+  statusButton.style.cssText = `
+    position: fixed;
+    top: 140px;
+    right: 20px;
+    z-index: 10001;
+    padding: 10px;
+    background: #2ed573;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+  `;
+  statusButton.onclick = mostrarStatusAtual;
+  document.body.appendChild(statusButton);
+
+  // Atualiza indicador de status
+  setInterval(() => {
+    const indicator = document.getElementById('status-indicator');
+    if (indicator) {
+      const now = new Date();
+      const time = now.toLocaleTimeString();
+      indicator.textContent = `🟢 ATIVO ${time}`;
+      indicator.style.background = '#2ed573';
+    }
+  }, 1000);
+
+  // Função para atualizar status em caso de erro
+  window.updateStatusError = function() {
+    const indicator = document.getElementById('status-indicator');
+    if (indicator) {
+      indicator.textContent = '🔴 ERRO API';
+      indicator.style.background = '#ff4757';
+    }
+  };
+
+  // Função para atualizar status em caso de sucesso
+  window.updateStatusSuccess = function() {
+    const indicator = document.getElementById('status-indicator');
+    if (indicator) {
+      indicator.textContent = '🟢 ATIVO';
+      indicator.style.background = '#2ed573';
+    }
+  };
+}, 2000);
 </script>
     
 <body>
@@ -305,9 +730,9 @@ setInterval(verificarPorta, 15000); // Verifica a cada 15 segundos
                     <li class="nav-item">
                         <a href="{% url 'mapa' %}" class="nav-link"><i class="fas fa-map-location-dot"></i> Mapa</a>
                     </li>
-                    <!--<li class="nav-item">
+                    <li class="nav-item">
                         <a href="/scanner/" class="nav-link"><i class="fas fa-qrcode"></i> Scanner</a>
-                    </li>-->
+                    </li>
                 </ul>
             </div>
 
