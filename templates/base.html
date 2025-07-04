@@ -601,113 +601,53 @@ function testarPortaFechada() {
   showAlertasLista(eventoTeste.eventos);
 }
 
-// Adiciona indicador de status e botão de teste
-setTimeout(() => {
-  // Indicador de status
-  const statusIndicator = document.createElement('div');
-  statusIndicator.id = 'status-indicator';
-  statusIndicator.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 10001;
-    padding: 8px 12px;
-    background: #2ed573;
-    color: white;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: bold;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-  `;
-  statusIndicator.textContent = '🟢 SISTEMA ATIVO';
-  document.body.appendChild(statusIndicator);
+// Indicador de status
+const statusIndicator = document.createElement('div');
+statusIndicator.id = 'status-indicator';
+statusIndicator.style.cssText = `
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10001;
+  padding: 8px 12px;
+  background: #2ed573;
+  color: white;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+`;
+statusIndicator.textContent = '🟢 SISTEMA ATIVO';
+document.body.appendChild(statusIndicator);
 
-  // Botão de teste
-  const testButton = document.createElement('button');
-  testButton.textContent = '🧪 Testar Porta Fechada';
-  testButton.style.cssText = `
-    position: fixed;
-    top: 60px;
-    right: 20px;
-    z-index: 10001;
-    padding: 10px;
-    background: #ff6b6b;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 12px;
-  `;
-  testButton.onclick = testarPortaFechada;
-  document.body.appendChild(testButton);
+// Atualiza indicador de status
+setInterval(() => {
+  const indicator = document.getElementById('status-indicator');
+  if (indicator) {
+    const now = new Date();
+    const time = now.toLocaleTimeString();
+    indicator.textContent = `🟢 ATIVO ${time}`;
+    indicator.style.background = '#2ed573';
+  }
+}, 1000);
 
-  // Botão para limpar cache
-  const clearCacheButton = document.createElement('button');
-  clearCacheButton.textContent = '🧹 Limpar Cache';
-  clearCacheButton.style.cssText = `
-    position: fixed;
-    top: 100px;
-    right: 20px;
-    z-index: 10001;
-    padding: 10px;
-    background: #3742fa;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 12px;
-  `;
-  clearCacheButton.onclick = limparCacheAlertas;
-  document.body.appendChild(clearCacheButton);
+// Função para atualizar status em caso de erro
+window.updateStatusError = function() {
+  const indicator = document.getElementById('status-indicator');
+  if (indicator) {
+    indicator.textContent = '🔴 ERRO API';
+    indicator.style.background = '#ff4757';
+  }
+};
 
-  // Botão para mostrar estado atual
-  const statusButton = document.createElement('button');
-  statusButton.textContent = '📊 Status Atual';
-  statusButton.style.cssText = `
-    position: fixed;
-    top: 140px;
-    right: 20px;
-    z-index: 10001;
-    padding: 10px;
-    background: #2ed573;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 12px;
-  `;
-  statusButton.onclick = mostrarStatusAtual;
-  document.body.appendChild(statusButton);
-
-  // Atualiza indicador de status
-  setInterval(() => {
-    const indicator = document.getElementById('status-indicator');
-    if (indicator) {
-      const now = new Date();
-      const time = now.toLocaleTimeString();
-      indicator.textContent = `🟢 ATIVO ${time}`;
-      indicator.style.background = '#2ed573';
-    }
-  }, 1000);
-
-  // Função para atualizar status em caso de erro
-  window.updateStatusError = function() {
-    const indicator = document.getElementById('status-indicator');
-    if (indicator) {
-      indicator.textContent = '🔴 ERRO API';
-      indicator.style.background = '#ff4757';
-    }
-  };
-
-  // Função para atualizar status em caso de sucesso
-  window.updateStatusSuccess = function() {
-    const indicator = document.getElementById('status-indicator');
-    if (indicator) {
-      indicator.textContent = '🟢 ATIVO';
-      indicator.style.background = '#2ed573';
-    }
-  };
-}, 2000);
+// Função para atualizar status em caso de sucesso
+window.updateStatusSuccess = function() {
+  const indicator = document.getElementById('status-indicator');
+  if (indicator) {
+    indicator.textContent = '🟢 ATIVO';
+    indicator.style.background = '#2ed573';
+  }
+};
 </script>
     
 <body>
