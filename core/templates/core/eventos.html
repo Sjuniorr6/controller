@@ -1,0 +1,390 @@
+{% extends 'base.html' %}
+
+{% block title %}Eventos - Sistema de Monitoramento{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-exclamation-triangle"></i> Eventos de Monitoramento
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Estatísticas -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="info-box bg-info">
+                                <span class="info-box-icon"><i class="fas fa-list"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Total de Eventos</span>
+                                    <span class="info-box-number">{{ total_eventos }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="info-box bg-warning">
+                                <span class="info-box-icon"><i class="fas fa-clock"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Pendentes</span>
+                                    <span class="info-box-number">{{ pendentes }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="info-box bg-success">
+                                <span class="info-box-icon"><i class="fas fa-check"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Tratados</span>
+                                    <span class="info-box-number">{{ tratados }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="info-box bg-primary">
+                                <span class="info-box-icon"><i class="fas fa-sync"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Última Atualização</span>
+                                    <span class="info-box-number">{{ eventos.first.data_criacao|date:"H:i" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controles -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <form method="get" class="form-inline">
+                                <div class="form-group mr-2">
+                                    <label for="status" class="mr-1">Status:</label>
+                                    <select name="status" id="status" class="form-control">
+                                        <option value="">Todos</option>
+                                        <option value="pendente" {% if status_filter == 'pendente' %}selected{% endif %}>Pendente</option>
+                                        <option value="tratado" {% if status_filter == 'tratado' %}selected{% endif %}>Tratado</option>
+                                    </select>
+                                </div>
+                                <div class="form-group mr-2">
+                                    <label for="fonte" class="mr-1">Fonte:</label>
+                                    <select name="fonte" id="fonte" class="form-control">
+                                        <option value="">Todas</option>
+                                        <option value="T42" {% if fonte_filter == 'T42' %}selected{% endif %}>T42</option>
+                                        <option value="AssetsControls" {% if fonte_filter == 'AssetsControls' %}selected{% endif %}>AssetsControls</option>
+                                    </select>
+                                </div>
+                                <div class="form-group mr-2">
+                                    <label for="tipo" class="mr-1">Tipo:</label>
+                                    <select name="tipo" id="tipo" class="form-control">
+                                        <option value="">Todos</option>
+                                        <option value="aberta" {% if tipo_filter == 'aberta' %}selected{% endif %}>Porta Aberta</option>
+                                        <option value="luz" {% if tipo_filter == 'luz' %}selected{% endif %}>Luminosidade</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary mr-2">
+                                    <i class="fas fa-filter"></i> Filtrar
+                                </button>
+                                <a href="{% url 'eventos' %}" class="btn btn-secondary">
+                                    <i class="fas fa-times"></i> Limpar
+                                </a>
+                            </form>
+                            
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-success" onclick="verificarAlertas()">
+                                    <i class="fas fa-search"></i> Verificar Alertas
+                                </button>
+                                <button type="button" class="btn btn-warning" onclick="testarSalvamento()">
+                                    <i class="fas fa-vial"></i> Testar Salvamento
+                                </button>
+                                <button type="button" class="btn btn-info" onclick="ativarAutoRefresh()">
+                                    <i class="fas fa-sync"></i> Auto-refresh
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabela de Eventos -->
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tipo</th>
+                                    <th>Equipamento</th>
+                                    <th>Fonte</th>
+                                    <th>Geofence</th>
+                                    <th>Valor</th>
+                                    <th>Status</th>
+                                    <th>Data/Hora</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for evento in eventos %}
+                                <tr class="{% if evento.status == 'pendente' %}table-warning{% endif %}">
+                                    <td>
+                                        <small class="text-muted">#{{ evento.id }}</small>
+                                    </td>
+                                    <td>
+                                        {% if evento.tipo_evento == 'aberta' %}
+                                            <span class="badge badge-danger">
+                                                <i class="fas fa-door-open"></i> Porta Aberta
+                                            </span>
+                                        {% elif evento.tipo_evento == 'luz' %}
+                                            <span class="badge badge-warning">
+                                                <i class="fas fa-lightbulb"></i> Luminosidade
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ evento.id_equipamento }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-info">{{ evento.fonte }}</span>
+                                    </td>
+                                    <td>
+                                        {% if evento.geofence %}
+                                            <span class="badge badge-secondary">{{ evento.geofence }}</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if evento.valor %}
+                                            <strong>{{ evento.valor }}</strong>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if evento.status == 'pendente' %}
+                                            <span class="badge badge-warning">
+                                                <i class="fas fa-clock"></i> Pendente
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-success">
+                                                <i class="fas fa-check"></i> Tratado
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ evento.data_criacao|date:"d/m/Y H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        {% if evento.status == 'pendente' %}
+                                            <button class="btn btn-sm btn-success" onclick="marcarTratado('{{ evento.id }}')">
+                                                <i class="fas fa-check"></i> Tratar
+                                            </button>
+                                        {% endif %}
+                                        <button class="btn btn-sm btn-info" onclick="verDetalhes('{{ evento.id }}')">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted">
+                                        <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                                        Nenhum evento encontrado
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Paginação -->
+                    {% if eventos.has_other_pages %}
+                    <nav aria-label="Paginação de eventos">
+                        <ul class="pagination justify-content-center">
+                            {% if eventos.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ eventos.previous_page_number }}">Anterior</a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for num in eventos.paginator.page_range %}
+                                <li class="page-item {% if eventos.number == num %}active{% endif %}">
+                                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endfor %}
+                            
+                            {% if eventos.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ eventos.next_page_number }}">Próximo</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Detalhes -->
+<div class="modal fade" id="detalhesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalhes do Evento</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="detalhesContent">
+                <!-- Conteúdo será carregado via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let autoRefreshInterval = null;
+
+function marcarTratado(eventoId) {
+    if (confirm('Deseja marcar este evento como tratado?')) {
+        const observacoes = prompt('Observações (opcional):');
+        
+        fetch(`/eventos/${eventoId}/tratar/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `observacoes=${encodeURIComponent(observacoes || '')}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Evento marcado como tratado com sucesso!');
+                location.reload();
+            } else {
+                alert('Erro: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao processar a requisição');
+        });
+    }
+}
+
+function verDetalhes(eventoId) {
+    // Implementar carregamento de detalhes via AJAX
+    $('#detalhesModal').modal('show');
+    $('#detalhesContent').html('<div class="text-center"><i class="fas fa-spinner fa-spin"></i> Carregando...</div>');
+}
+
+function verificarAlertas() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+    btn.disabled = true;
+    
+    fetch('/verificar-alertas-lotes/', {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Resposta da verificação:', data);
+        alert(`Verificação concluída!\n\nEventos encontrados: ${data.eventos_encontrados}\nEventos salvos: ${data.eventos_salvos}\nEquipamentos AC: ${data.total_equipamentos_ac}\nEquipamentos T42: ${data.total_equipamentos_t42}`);
+        if (data.eventos_encontrados > 0) {
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao verificar alertas');
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+
+function testarSalvamento() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testando...';
+    btn.disabled = true;
+    
+    fetch('/testar-salvamento/', {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Resposta do teste:', data);
+        if (data.success) {
+            alert(`✅ Teste de salvamento bem-sucedido!\n\n${data.message}`);
+            location.reload();
+        } else {
+            alert(`❌ Erro no teste: ${data.error}`);
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao testar salvamento: ' + error.message);
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+
+function ativarAutoRefresh() {
+    const btn = event.target;
+    
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        btn.innerHTML = '<i class="fas fa-sync"></i> Auto-refresh';
+        btn.classList.remove('btn-warning');
+        btn.classList.add('btn-info');
+        alert('Auto-refresh desativado');
+    } else {
+        autoRefreshInterval = setInterval(function() {
+            location.reload();
+        }, 30000); // 30 segundos
+        
+        btn.innerHTML = '<i class="fas fa-stop"></i> Parar';
+        btn.classList.remove('btn-info');
+        btn.classList.add('btn-warning');
+        alert('Auto-refresh ativado (30s)');
+    }
+}
+
+// Verificar alertas automaticamente a cada 2 minutos
+setInterval(function() {
+    fetch('/verificar-alertas-lotes/', {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.eventos_encontrados > 0) {
+            console.log(`Novos eventos detectados: ${data.eventos_encontrados}`);
+            // Não recarrega automaticamente, apenas loga
+        }
+    })
+    .catch(error => {
+        console.error('Erro na verificação automática:', error);
+    });
+}, 120000); // 2 minutos
+</script>
+{% endblock %} 
