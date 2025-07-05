@@ -746,3 +746,59 @@ def update_t42_data(request, unit_id):
         "success": False,
         "error": "Method not allowed"
     }, status=405)
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.core.cache import cache
+
+@csrf_exempt
+def eventos_recentes(request):
+    eventos = cache.get("eventos_recentes", [])
+    return JsonResponse({"eventos": eventos, "total": len(eventos)})
+
+
+
+
+
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from django.utils.timezone import now, timedelta
+
+from core.models import EventoTratado
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from django.db.models import Max
+from core.models import EventoTratado
+
+@require_GET
+def alertas_api(request):
+    """
+    Retorna somente os eventos MAIS RECENTES do banco.
+    O front envia ?last_id=X   → devolvemos só id>X
+    """
+    try:
+        last_id = int(request.GET.get("last_id", 0))
+    except ValueError:
+        last_id = 0
+
+    qs = (
+        EventoTratado.objects
+        .filter(id__gt=last_id)
+        .order_by("id")[:200]           # no máximo 200 por chamada
+    )
+
+    eventos = [
+        {
+            "id"          : ev.id,
+            "guid"        : ev.guid,
+            "tipo_evento" : ev.tipo_evento,          # "door" | "light"
+            "valor"       : ev.valor,                # 0/1 ou lux
+            "data"        : ev.criado_em.isoformat()
+        }
+        for ev in qs
+    ]
+
+    return JsonResponse({
+        "ultimo_id" : eventos[-1]["id"] if eventos else last_id,
+        "eventos"   : eventos,
+    })

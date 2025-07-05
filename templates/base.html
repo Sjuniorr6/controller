@@ -260,395 +260,112 @@
 </head>
 
 <audio id="alarme-audio" src="/static/som-alerta.mp3" preload="auto"></audio>
+{% comment %}  ▼▼  ALERTAS TEMPO-REAL  ▼▼  {% endcomment %}
 <script>
-// Controle de estados anteriores para evitar repetições
-let estadosAnteriores = new Map(); // guid -> { porta: status, luminosidade: valor }
-let alertasAtivos = new Set(); // Para controlar alertas já mostrados
 
-// Função para limpar cache quando trocar de tela
-function limparCacheAlertas() {
-  estadosAnteriores.clear();
-  alertasAtivos.clear();
-  console.log("🧹 Cache de alertas limpo");
-  
-  // Mostra notificação visual
-  const notification = document.createElement('div');
-  notification.textContent = '🧹 Cache de alertas limpo!';
-  notification.style.cssText = `
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #3742fa;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 5px;
-    z-index: 10002;
-    font-size: 14px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-  `;
-  document.body.appendChild(notification);
-  
-  // Remove a notificação após 3 segundos
-  setTimeout(() => {
-    if (notification.parentNode) {
-      notification.parentNode.removeChild(notification);
-    }
-  }, 3000);
-}
+/* ------------------ 0. CHAVES DO STORAGE ------------------ */
+const STORAGE_LAST_ID = "alertas_last_id";      // inteiro
+const STORAGE_SEEN    = "alertas_vistos";       // array de id
 
-// Função para limpar cache silenciosamente (sem mostrar todos os alertas)
-function limparCacheSilencioso() {
-  estadosAnteriores.clear();
-  alertasAtivos.clear();
-  console.log("🧹 Cache de alertas limpo silenciosamente");
-}
+/* ------------------ 1. ESTADOS & UTILS ------------------ */
+let estadosAnteriores = new Map();              // guid → { porta, luz }
+let ultimoIdRecebido  = Number(sessionStorage.getItem(STORAGE_LAST_ID) || 0);
 
-// Função para mostrar status atual de todos os equipamentos
-function mostrarStatusAtual() {
-  console.log("📊 Status atual dos equipamentos:");
-  console.log(estadosAnteriores);
-  
-  let statusText = "📊 Status Atual dos Equipamentos:\n\n";
-  
-  if (estadosAnteriores.size === 0) {
-    statusText += "Nenhum equipamento monitorado ainda.";
-  } else {
-    estadosAnteriores.forEach((estado, guid) => {
-      const portaStatus = estado.porta === null ? "❓ Desconhecido" : 
-                         estado.porta === 1 ? "🚪 Aberta" : "🔒 Fechada";
-      const luzStatus = estado.luminosidade === null ? "❓ Desconhecido" : 
-                       `${estado.luminosidade} lux`;
-      
-      statusText += `GUID: ${guid.substring(0, 8)}...\n`;
-      statusText += `  Porta: ${portaStatus}\n`;
-      statusText += `  Luminosidade: ${luzStatus}\n\n`;
-    });
+function salvarUltimoId(id) {
+  if (id > ultimoIdRecebido) {
+    ultimoIdRecebido = id;
+    sessionStorage.setItem(STORAGE_LAST_ID, String(id));
   }
-  
-  // Mostra em um popup
-  const popup = document.createElement('div');
-  popup.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: white;
-    border: 2px solid #3742fa;
-    border-radius: 10px;
-    padding: 20px;
-    z-index: 10003;
-    max-width: 500px;
-    max-height: 400px;
-    overflow-y: auto;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  `;
-  
-  popup.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-      <h3 style="margin: 0; color: #3742fa;">Status Atual</h3>
-      <button onclick="this.parentElement.parentElement.remove()" style="background: #ff6b6b; color: white; border: none; border-radius: 3px; padding: 5px 10px; cursor: pointer;">✕</button>
-    </div>
-    <pre style="white-space: pre-wrap; font-family: monospace; font-size: 12px; margin: 0;">${statusText}</pre>
-  `;
-  
-  document.body.appendChild(popup);
 }
 
-// Limpa cache quando a página é carregada/recarregada
-window.addEventListener('load', limparCacheSilencioso);
-window.addEventListener('beforeunload', limparCacheSilencioso);
-
-// Limpa cache quando há mudança de URL (navegação)
-let currentUrl = window.location.href;
-setInterval(() => {
-  if (window.location.href !== currentUrl) {
-    currentUrl = window.location.href;
-    limparCacheSilencioso();
-  }
-}, 1000);
-
+/* ------------------ 2. POP-UP ------------------ */
 function showAlertasLista(eventos) {
-  // Remove popup anterior se existir
-  const existingPopup = document.querySelector('.alertas-popup');
-  const existingOverlay = document.querySelector('.popup-overlay');
-  if (existingPopup) existingPopup.remove();
-  if (existingOverlay) existingOverlay.remove();
+  if (!eventos.length) return;
 
-  // Cria overlay
-  const overlay = document.createElement('div');
-  overlay.className = 'popup-overlay';
-  document.body.appendChild(overlay);
+  /* ~~ HISTÓRICO DE EVENTOS JÁ EXIBIDOS ~~ */
+  const vistos = JSON.parse(sessionStorage.getItem(STORAGE_SEEN) || "[]");
 
-  // Cria popup da lista
-  const popup = document.createElement('div');
-  popup.className = 'alertas-popup';
+  // cria overlay / popup
+  const overlay = document.createElement("div");
+  overlay.className = "popup-overlay";
+  const popup   = document.createElement("div");
+  popup.className = "alertas-popup";
+  document.body.append(overlay, popup);
 
-  // Filtra apenas eventos que representam mudanças reais
-  const eventosFiltrados = eventos.filter(evento => {
-    const guid = evento.guid;
-    const estadoAnterior = estadosAnteriores.get(guid) || { porta: null, luminosidade: null };
-    
-    console.log(`🔍 Filtrando evento: ${evento.evento} para ${evento.equipamento} (GUID: ${guid})`);
-    console.log(`📊 Estado anterior:`, estadoAnterior);
-    
-    if (evento.evento === 'aberta' || evento.evento === 'fechada') {
-      const novoStatus = evento.evento === 'aberta' ? 1 : 0;
-      console.log(`🚪 Novo status da porta: ${novoStatus}, Status anterior: ${estadoAnterior.porta}`);
-      
-      // Se é a primeira vez que vemos este equipamento, apenas registra o estado sem mostrar alerta
-      if (estadoAnterior.porta === null) {
-        estadosAnteriores.set(guid, { ...estadoAnterior, porta: novoStatus });
-        console.log(`📝 Estado inicial registrado para ${evento.equipamento}: porta ${evento.evento}`);
-        return false; // Não mostra alerta na primeira vez
-      }
-      
-      // Só mostra alerta se houve mudança real de status
-      if (estadoAnterior.porta !== novoStatus) {
-        estadosAnteriores.set(guid, { ...estadoAnterior, porta: novoStatus });
-        console.log(`✅ Evento de porta ${evento.evento} ACEITO (mudança real)`);
-        return true;
-      } else {
-        console.log(`❌ Evento de porta ${evento.evento} REJEITADO (sem mudança)`);
-        return false;
-      }
-    }
-    
-    if (evento.evento === 'luz') {
-      console.log(`💡 Luminosidade: ${evento.valor}, Valor anterior: ${estadoAnterior.luminosidade}`);
-      
-      // Se é a primeira vez que vemos luminosidade deste equipamento, apenas registra
-      if (estadoAnterior.luminosidade === null) {
-        estadosAnteriores.set(guid, { ...estadoAnterior, luminosidade: evento.valor });
-        console.log(`📝 Estado inicial de luminosidade registrado para ${evento.equipamento}: ${evento.valor}`);
-        return false; // Não mostra alerta na primeira vez
-      }
-      
-      // Só mostra alerta se houve mudança real
-      if (estadoAnterior.luminosidade !== evento.valor) {
-        estadosAnteriores.set(guid, { ...estadoAnterior, luminosidade: evento.valor });
-        console.log(`✅ Evento de luminosidade ACEITO (mudança real)`);
-        return true;
-      } else {
-        console.log(`❌ Evento de luminosidade REJEITADO (sem mudança)`);
-        return false;
-      }
-    }
-    
-    console.log(`❓ Evento desconhecido: ${evento.evento}`);
-    return false;
+  let html = `<div class="alertas-header">
+                <div class="alertas-title">🚨 ALERTAS DETECTADOS</div>
+                <div class="alertas-subtitle">${eventos.length} evento(s)</div>
+              </div><ul class="alertas-list">`;
+
+  eventos.forEach(ev => {
+    /* 2a) se este ID já foi visto, ignora */
+    if (vistos.includes(ev.id)) return;
+
+    /* 2b) só mostra se houve MUDANÇA de estado */
+    const prev = estadosAnteriores.get(ev.guid) || {};
+    if (ev.tipo_evento === "door"  && prev.porta === ev.valor) return;
+    if (ev.tipo_evento === "light" && prev.luz   === ev.valor) return;
+
+    // ----- montar alert -----
+    const cls  = ev.tipo_evento === "door"
+                   ? (ev.valor ? "porta-aberta" : "porta-fechada")
+                   : "luminosidade";
+    const icon = ev.tipo_evento === "door"
+                   ? (ev.valor ? "🚨" : "✅") : "💡";
+    const desc = ev.tipo_evento === "door"
+                   ? (ev.valor ? "Porta aberta" : "Porta fechada")
+                   : `Luminosidade: <span class="alerta-valor">${ev.valor} lux</span>`;
+
+    html += `<li class="alerta-item ${cls}">
+               <div class="alerta-icon">${icon}</div>
+               <div class="alerta-content">
+                 <div class="alerta-equipamento">${ev.guid}</div>
+                 <div class="alerta-descricao">${desc}</div>
+               </div>
+             </li>`;
+
+    // cacheia estado e marca como visto
+    estadosAnteriores.set(ev.guid, { ...prev, [ev.tipo_evento]: ev.valor });
+    vistos.push(ev.id);
   });
 
-  console.log(`📋 Total de eventos recebidos: ${eventos.length}`);
-  console.log(`✅ Eventos filtrados (mudanças reais): ${eventosFiltrados.length}`);
-  
-  // Se não há eventos filtrados, não mostra popup
-  if (eventosFiltrados.length === 0) {
-    console.log(`❌ Nenhum evento filtrado, removendo overlay`);
-    overlay.remove();
-    return;
+  html += `</ul><button class="popup-close"
+            onclick="this.parentNode.remove();overlay.remove()">Fechar</button>`;
+  popup.innerHTML = html;
+
+  // toca som se houve algo novo
+  if (popup.querySelectorAll(".alerta-item").length) {
+    document.getElementById("alarme-audio")?.play().catch(() => {});
+    sessionStorage.setItem(STORAGE_SEEN, JSON.stringify(vistos));
+  } else {
+    popup.remove(); overlay.remove();      // nada novo ⇒ fecha já
   }
 
-  // Gera HTML da lista
-  let alertasHTML = '';
-  eventosFiltrados.forEach(evento => {
-    let icon, descricao, classe;
-    
-    switch(evento.evento) {
-      case 'aberta':
-        icon = '🚨';
-        descricao = 'Porta aberta detectada';
-        classe = 'porta-aberta';
-        break;
-      case 'fechada':
-        icon = '✅';
-        descricao = 'Porta fechada';
-        classe = 'porta-fechada';
-        break;
-      case 'luz':
-        icon = '💡';
-        descricao = `Luminosidade alta: <span class="alerta-valor">${evento.valor} lux</span>`;
-        classe = 'luminosidade';
-        break;
-    }
-
-    alertasHTML += `
-      <li class="alerta-item ${classe}">
-        <div class="alerta-icon">${icon}</div>
-        <div class="alerta-content">
-          <div class="alerta-equipamento">${evento.equipamento}</div>
-          <div class="alerta-descricao">${descricao}</div>
-        </div>
-      </li>
-    `;
-  });
-
-  popup.innerHTML = `
-    <div class="alertas-header">
-      <div class="alertas-title">🚨 ALERTAS DETECTADOS</div>
-      <div class="alertas-subtitle">${eventosFiltrados.length} evento(s) encontrado(s)</div>
-    </div>
-    <ul class="alertas-list">
-      ${alertasHTML}
-    </ul>
-    <button class="popup-close" onclick="closeAlertasPopup()">Fechar</button>
-  `;
-
-  document.body.appendChild(popup);
-
-  // Auto-close após 8 segundos (mais rápido)
-  setTimeout(() => {
-    closeAlertasPopup();
-  }, 8000);
+  setTimeout(() => { popup.remove(); overlay.remove(); }, 10000);
 }
 
-function closeAlertasPopup() {
-  const popup = document.querySelector('.alertas-popup');
-  const overlay = document.querySelector('.popup-overlay');
-  if (popup) popup.remove();
-  if (overlay) overlay.remove();
-}
-
-function verificarPorta() {
-  // Adiciona timestamp para evitar requisições simultâneas
-  if (verificarPorta.isRunning) {
-    console.log("⏳ Verificação já em andamento, pulando...");
-    return;
-  }
-  
-  verificarPorta.isRunning = true;
-  
-  fetch("{% url 'verificar_fdoor' %}")
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      return response.json();
-    })
+/* ------------------ 3. POLLING ------------------ */
+function pollAlertas() {
+  fetch("{% url 'alertas_api' %}?last_id=" + ultimoIdRecebido)
+    .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
     .then(data => {
-      const audio = document.getElementById("alarme-audio");
-
-      // Debug: Log da resposta completa
-      console.log("📡 Resposta da API:", data);
-
-      // Atualiza status para sucesso
-      if (window.updateStatusSuccess) {
-        window.updateStatusSuccess();
-      }
-
-      // Verifica se há eventos na resposta
-      if (data.eventos && data.eventos.length > 0) {
-        console.log("🎯 Eventos recebidos:", data.eventos);
-        
-        // Toca o som apenas uma vez se houver eventos
-        if (audio) {
-          audio.play().catch(err => console.log("Erro ao tocar som:", err));
-        }
-        
-        // Mostra lista de alertas com filtro de repetições
+      if (data.eventos?.length) {
         showAlertasLista(data.eventos);
-      }
-      
-      // Log para debug (opcional)
-      if (data.total_eventos > 0) {
-        console.log(`Detectados ${data.total_eventos} eventos`);
+        salvarUltimoId(data.ultimo_id);
       }
     })
-    .catch(error => {
-      console.error("Erro ao verificar porta:", error);
-      
-      // Atualiza status para erro
-      if (window.updateStatusError) {
-        window.updateStatusError();
-      }
-    })
-    .finally(() => {
-      verificarPorta.isRunning = false;
-    });
+    .catch(err => console.error("🔥 Erro na API de alertas:", err));
 }
 
-// Inicia verificação automática a cada 10 segundos (mais estável)
-setInterval(verificarPorta, 10000);
-
-// Primeira verificação imediata
-setTimeout(verificarPorta, 1000);
-
-// Verificação extra rápida para eventos críticos (a cada 5 segundos)
-let verificacaoRapida = setInterval(() => {
-  // Só faz verificação rápida se não houver popup ativo
-  const popupAtivo = document.querySelector('.alertas-popup');
-  if (!popupAtivo) {
-    verificarPorta();
-  }
-}, 5000);
-
-// Função de teste para simular eventos de porta fechada
-function testarPortaFechada() {
-  console.log("🧪 TESTE: Simulando evento de porta fechada");
-  
-  const eventoTeste = {
-    eventos: [
-      {
-        evento: 'fechada',
-        equipamento: 'TESTE - Equipamento 001',
-        guid: 'test-guid-001'
-      }
-    ],
-    total_eventos: 1,
-    total_equipamentos: 533
-  };
-  
-  showAlertasLista(eventoTeste.eventos);
-}
-
-// Indicador de status
-const statusIndicator = document.createElement('div');
-statusIndicator.id = 'status-indicator';
-statusIndicator.style.cssText = `
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 10001;
-  padding: 8px 12px;
-  background: #2ed573;
-  color: white;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: bold;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-`;
-statusIndicator.textContent = '🟢 SISTEMA ATIVO';
-document.body.appendChild(statusIndicator);
-
-// Atualiza indicador de status
-setInterval(() => {
-  const indicator = document.getElementById('status-indicator');
-  if (indicator) {
-    const now = new Date();
-    const time = now.toLocaleTimeString();
-    indicator.textContent = `🟢 ATIVO ${time}`;
-    indicator.style.background = '#2ed573';
-  }
-}, 1000);
-
-// Função para atualizar status em caso de erro
-window.updateStatusError = function() {
-  const indicator = document.getElementById('status-indicator');
-  if (indicator) {
-    indicator.textContent = '🔴 ERRO API';
-    indicator.style.background = '#ff4757';
-  }
-};
-
-// Função para atualizar status em caso de sucesso
-window.updateStatusSuccess = function() {
-  const indicator = document.getElementById('status-indicator');
-  if (indicator) {
-    indicator.textContent = '🟢 ATIVO';
-    indicator.style.background = '#2ed573';
-  }
-};
+/* ------------------ 4. BOOTSTRAP ------------------ */
+window.addEventListener("load", () => {
+  estadosAnteriores.clear();          // limpa **apenas memória**
+  pollAlertas();                      // primeira chamada
+  setInterval(pollAlertas, 5000);     // depois a cada 5 s
+});
 </script>
+
+
     
 <body>
 

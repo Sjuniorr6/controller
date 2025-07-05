@@ -44,12 +44,22 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'core',
+    'django_celery_beat',
     'rest_framework',
     'rest_framework.authtoken',
     'equipamentos',
     'scanner',
 ]
 
+from celery.schedules import crontab
+from datetime import timedelta
+CELERY_BEAT_SCHEDULE = {
+    'verificar_assetcontrol_cada_1_minuto': {
+        'task': 'core.tasks.verificar_alertas_equipamentos',
+        'schedule': timedelta(seconds=10.0),
+    },
+    
+}
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
@@ -87,6 +97,9 @@ TEMPLATES = [
 ]
 WSGI_APPLICATION = 'app.wsgi.application'
 
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases

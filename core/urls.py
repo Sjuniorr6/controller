@@ -7,8 +7,9 @@ from .views import (
     equipamento_listcarmo_view, MapaView, get_t42_data, get_assetscontrols_data,
     AltocafezalCreateView, equipamento_list_view, burbomcofeCreateView,
     equipamento_listburbom_view, equipamento_listnkg_view, equipamento_listvelosocofe_view,
-    update_assetscontrols_data, update_t42_data, verificar_fdoor
+    update_assetscontrols_data, update_t42_data, verificar_fdoor,eventos_recentes,alertas_api
 )
+
 
 urlpatterns = [
     path("", HomeView.as_view(), name="home"),
@@ -48,4 +49,6 @@ urlpatterns = [
     
     #api
      path('verificar-fdoor/', verificar_fdoor, name='verificar_fdoor'),
+     path("api/eventos-recentes/", eventos_recentes, name="eventos_recentes"),
+     path("api/alertas/", alertas_api, name="alertas_api"),
 ]
