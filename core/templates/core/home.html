@@ -5,174 +5,419 @@
 {% block title %}Home - T42{% endblock %}
 
 {% block content %}
-<div class="hero-container">
-    <div class="hero-content">
-        <h1>Plataforma de Controle</h1>
-       
-        
-    </div>
-
-    <!-- Nova seção para os cards -->
-    <div class="hero-cards">
-        <div class="card text-center shadow-lg">
-            <div class="card-body">
-                <i class="fa-solid fa-ship fa-3x text-primary mb-3"></i>
-                <h5 class="card-title text-dark">Mapa</h5>
-                <p class="card-text text-muted">Acesse a localização dos navios em tempo real.</p>
-                <a href="{% url 'mapa' %}" class="btn btn-primary">Ver Mapa</a>
-            </div>
-        </div>
-        <div class="card text-center shadow-lg">
-            <div class="card-body">
-                <i class="fa-solid fa-qrcode fa-3x text-success mb-3"></i>
-                <h5 class="card-title text-dark">Scanner QR Code</h5>
-                <p class="card-text text-muted">Acesse o scanner de equipamentos via QR Code.</p>
-                <a href="/scanner/" class="btn btn-success">Abrir Scanner</a>
+<!-- Hero Section -->
+<div class="hero-section position-relative overflow-hidden rounded-4 shadow-lg mb-5">
+    <div class="hero-background position-absolute w-100 h-100"></div>
+    <div class="hero-overlay position-absolute w-100 h-100"></div>
+    
+    <div class="hero-content position-relative z-3 text-center text-white py-5 px-4">
+        <div class="container">
+            <h1 class="display-3 fw-bold mb-4 text-shadow">
+                <i class="fas fa-satellite-dish me-3 text-warning"></i>
+                Plataforma de Controle
+            </h1>
+            <p class="lead mb-5 opacity-90">
+                Sistema integrado para monitoramento e controle de equipamentos
+            </p>
+            <div class="hero-badge">
+                <span class="badge bg-warning text-dark px-3 py-2 fs-6">
+                    <i class="fas fa-rocket me-2"></i>
+                    Tecnologia Avançada
+                </span>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Cards de Navegação -->
+<div class="container">
+    <div class="row justify-content-center g-4">
+        <!-- Card do Mapa -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-lg hover-card map-card">
+                <div class="card-body text-center p-4">
+                    <div class="icon-wrapper bg-gradient-primary rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                        <i class="fas fa-map-location-dot fa-2x text-white"></i>
+                    </div>
+                    <h5 class="card-title fw-bold mb-3 text-primary">Mapa Interativo</h5>
+                    <p class="card-text text-muted mb-4">
+                        Acesse a localização dos navios e equipamentos em tempo real com visualização geográfica avançada.
+                    </p>
+                    <a href="{% url 'mapa' %}" class="btn btn-gradient-primary btn-lg w-100">
+                        <i class="fas fa-map me-2"></i>
+                        Ver Mapa
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card do Scanner -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-lg hover-card scanner-card">
+                <div class="card-body text-center p-4">
+                    <div class="icon-wrapper bg-gradient-success rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                        <i class="fas fa-qrcode fa-2x text-white"></i>
+                    </div>
+                    <h5 class="card-title fw-bold mb-3 text-success">Scanner QR Code</h5>
+                    <p class="card-text text-muted mb-4">
+                        Registre equipamentos rapidamente através de QR Code com câmera integrada e interface intuitiva.
+                    </p>
+                    <a href="/scanner/" class="btn btn-gradient-success btn-lg w-100">
+                        <i class="fas fa-camera me-2"></i>
+                        Abrir Scanner
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card de Estatísticas -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-lg hover-card dashboard-card">
+                <div class="card-body text-center p-4">
+                    <div class="icon-wrapper bg-gradient-info rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                        <i class="fas fa-chart-line fa-2x text-white"></i>
+                    </div>
+                    <h5 class="card-title fw-bold mb-3 text-info">Dashboard</h5>
+                    <p class="card-text text-muted mb-4">
+                        Visualize estatísticas, relatórios e métricas em tempo real para tomada de decisões estratégicas.
+                    </p>
+                    <a href="{% url 'resumo' %}" class="btn btn-gradient-info btn-lg w-100">
+                        <i class="fas fa-tachometer-alt me-2"></i>
+                        Ver Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção de Recursos -->
+    <div class="row mt-5 pt-5">
+        <div class="col-12">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold text-gradient-primary mb-3">
+                    <i class="fas fa-star me-3 text-warning"></i>
+                    Recursos Principais
+                </h2>
+                <p class="lead text-muted">
+                    Descubra as funcionalidades que tornam nossa plataforma única
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="feature-card text-center p-4 security-card">
+                <div class="feature-icon bg-gradient-warning rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fas fa-shield-alt fa-lg text-white"></i>
+                </div>
+                <h6 class="fw-bold mb-2 text-warning">Segurança</h6>
+                <p class="text-muted small">Sistema seguro com autenticação e controle de acesso</p>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="feature-card text-center p-4 alert-card">
+                <div class="feature-icon bg-gradient-danger rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fas fa-bell fa-lg text-white"></i>
+                </div>
+                <h6 class="fw-bold mb-2 text-danger">Alertas</h6>
+                <p class="text-muted small">Notificações em tempo real para eventos importantes</p>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="feature-card text-center p-4 responsive-card">
+                <div class="feature-icon bg-gradient-secondary rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fas fa-mobile-alt fa-lg text-white"></i>
+                </div>
+                <h6 class="fw-bold mb-2 text-secondary">Responsivo</h6>
+                <p class="text-muted small">Interface adaptável para todos os dispositivos</p>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="feature-card text-center p-4 realtime-card">
+                <div class="feature-icon bg-gradient-dark rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                    <i class="fas fa-sync fa-lg text-white"></i>
+                </div>
+                <h6 class="fw-bold mb-2 text-dark">Tempo Real</h6>
+                <p class="text-muted small">Atualizações automáticas e sincronização instantânea</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Variáveis de cores personalizadas */
+:root {
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    --danger-gradient: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+    --secondary-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    --dark-gradient: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    --hover-shadow: 0 16px 48px rgba(0, 0, 0, 0.15);
+}
+
+/* Hero Section */
+.hero-section {
+    min-height: 400px;
+    margin-top: -2rem;
+    margin-bottom: 3rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.hero-background {
+    background: url('/static/images/FundoHome.png') no-repeat center center;
+    background-size: cover;
+    filter: brightness(0.3);
+}
+
+.hero-overlay {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
+}
+
+.hero-content {
+    min-height: 400px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-shadow {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.z-3 {
+    z-index: 3;
+}
+
+.hero-badge {
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+}
+
+/* Gradientes personalizados */
+.bg-gradient-primary {
+    background: var(--primary-gradient);
+}
+
+.bg-gradient-success {
+    background: var(--success-gradient);
+}
+
+.bg-gradient-info {
+    background: var(--info-gradient);
+}
+
+.bg-gradient-warning {
+    background: var(--warning-gradient);
+}
+
+.bg-gradient-danger {
+    background: var(--danger-gradient);
+}
+
+.bg-gradient-secondary {
+    background: var(--secondary-gradient);
+}
+
+.bg-gradient-dark {
+    background: var(--dark-gradient);
+}
+
+/* Botões com gradientes */
+.btn-gradient-primary {
+    background: var(--primary-gradient);
+    border: none;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-gradient-primary:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.btn-gradient-success {
+    background: var(--success-gradient);
+    border: none;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-gradient-success:hover {
+    background: linear-gradient(135deg, #0f8a7d 0%, #2edf6d 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(17, 153, 142, 0.4);
+}
+
+.btn-gradient-info {
+    background: var(--info-gradient);
+    border: none;
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.btn-gradient-info:hover {
+    background: linear-gradient(135deg, #3e9be4 0%, #00d8e0 100%);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+}
+
+/* Texto com gradiente */
+.text-gradient-primary {
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Cards */
+.hover-card {
+    transition: all 0.3s ease;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+}
+
+.hover-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--hover-shadow);
+}
+
+/* Cards específicos com bordas coloridas */
+.map-card {
+    border-left: 4px solid #667eea;
+}
+
+.scanner-card {
+    border-left: 4px solid #11998e;
+}
+
+.dashboard-card {
+    border-left: 4px solid #4facfe;
+}
+
+.icon-wrapper {
+    transition: all 0.3s ease;
+}
+
+.hover-card:hover .icon-wrapper {
+    transform: scale(1.1);
+}
+
+/* Feature Cards */
+.feature-card {
+    transition: all 0.3s ease;
+    border-radius: 12px;
+    border: 1px solid transparent;
+}
+
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--hover-shadow);
+}
+
+.security-card:hover {
+    border-color: #fa709a;
+    background: rgba(250, 112, 154, 0.05);
+}
+
+.alert-card:hover {
+    border-color: #ff9a9e;
+    background: rgba(255, 154, 158, 0.05);
+}
+
+.responsive-card:hover {
+    border-color: #a8edea;
+    background: rgba(168, 237, 234, 0.05);
+}
+
+.realtime-card:hover {
+    border-color: #2c3e50;
+    background: rgba(44, 62, 80, 0.05);
+}
+
+.feature-icon {
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover .feature-icon {
+    transform: scale(1.1);
+}
+
+/* Botões */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .hero-section {
+        min-height: 300px;
+        margin-top: -1rem;
+    }
     
+    .hero-content {
+        min-height: 300px;
+    }
+    
+    .display-3 {
+        font-size: 2rem;
+    }
+    
+    .display-5 {
+        font-size: 1.5rem;
+    }
+    
+    .lead {
+        font-size: 1rem;
+    }
+    
+    .card-body {
+        padding: 1.5rem !important;
+    }
+    
+    .feature-card {
+        padding: 1.5rem !important;
+    }
+}
 
-    <style>
-        body {
-            background-color: #dbdde4;
-        }
-
-        .hero-container {
-        width: 100%;
-        min-height: 700px;
-        background: url("{% static 'images/FundoHome.png' %}") no-repeat center center fixed;
-        background-size: cover;
-        position: relative;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        color: white;
-        border-radius: 20px;
-        margin-top: -30px;
-        padding: 20px;
-        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        .hero-cards {
-            display: flex;
-            flex-direction: row;
-            gap: 30px;
-            justify-content: center;
-            align-items: center;
-            margin-top: 30px;
-            flex-wrap: wrap;
-        }
-
-        .hero-cards .card {
-            width: 280px;
-            border-radius: 15px;
-            padding: 20px;
-            transition: transform 0.3s ease-in-out;
-            background: white;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-            margin-bottom: 20px;
-        }
-        .hero-cards .card-title {
-            font-size: 1.05rem;
-        }
-        .hero-cards .card-text {
-            font-size: 0.85rem;
-        }
-        .hero-cards .btn {
-            font-size: 0.85rem;
-            padding: 6px 14px;
-        }
-
-        .hero-cards .card:hover {
-            transform: scale(1.05);
-        }
-
-        .btn-cta {
-            display: inline-block;
-            margin-top: 15px;
-            padding: 12px 24px;
-            background: black;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 25px;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-
-        .btn-cta:hover {
-            background: #333;
-        }
-
-        .card {
-            width: 320px;
-            border-radius: 15px;
-            padding: 20px;
-            transition: transform 0.3s ease-in-out;
-            background: white;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-        .card-title {
-            font-size: 1.05rem;
-        }
-        .card-text {
-            font-size: 0.85rem;
-        }
-        .btn {
-            font-size: 0.85rem;
-            padding: 6px 14px;
-        }
-
-        .card:hover {
-            transform: scale(1.05);
-        }
-
-        .descricao-plataforma {
-            max-width: 900px;
-            margin: 40px auto;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        @media (max-width: 600px) {
-            .hero-cards {
-                flex-direction: row;
-                gap: 8px;
-            }
-            .hero-cards .card, .card {
-                width: 38vw;
-                max-width: 130px;
-                min-width: 90px;
-                height: 38vw;
-                max-height: 130px;
-                min-height: 90px;
-                padding: 8px 4px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-            }
-            .hero-cards .card-title, .card-title {
-                font-size: 0.75rem;
-            }
-            .hero-cards .card-text, .card-text {
-                font-size: 0.65rem;
-            }
-            .hero-cards .btn, .btn {
-                font-size: 0.65rem;
-                padding: 3px 6px;
-            }
-            h1 {
-                font-size: 1.1rem;
-            }
-        }
-    </style>
-
+@media (max-width: 576px) {
+    .hero-section {
+        min-height: 250px;
+    }
+    
+    .hero-content {
+        min-height: 250px;
+    }
+    
+    .display-3 {
+        font-size: 1.75rem;
+    }
+    
+    .card-body {
+        padding: 1rem !important;
+    }
+}
+</style>
 {% endblock %}

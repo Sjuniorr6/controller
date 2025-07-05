@@ -1,700 +1,591 @@
 {% extends "base.html" %}
-{% block title %}Equipamentos{% endblock %}
+{% block title %}Scanner de Equipamentos - T42{% endblock %}
 
 {% block content %}
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner de Equipamentos - T42</title>
-    <script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f7fa;
-            min-height: 100vh;
-            color: #333;
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            color: #2c3e50;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-
-        .header p {
-            font-size: 1.1rem;
-            color: #7f8c8d;
-            font-weight: 400;
-        }
-
-        .card {
-            background: white;
-            border-radius: 8px;
-            padding: 30px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            border: 1px solid #e9ecef;
-        }
-
-        .scanner-section {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .warning-box {
-            background: #fff3cd;
-            color: #856404;
-            padding: 15px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.95rem;
-            border: 1px solid #ffeaa7;
-        }
-
-        .warning-box strong {
-            font-weight: 600;
-        }
-
-        #preview {
-            width: 100%;
-            max-width: 400px;
-            border-radius: 8px;
-            border: 2px solid #e9ecef;
-            margin: 20px auto;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            background: #f8f9fa;
-        }
-
-        .camera-controls {
-            margin: 20px 0;
-        }
-
-        .btn {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            margin: 5px;
-        }
-
-        .btn:hover {
-            background: #2980b9;
-            transform: translateY(-1px);
-        }
-
-        .btn:active {
-            transform: translateY(0);
-        }
-
-        .btn-secondary {
-            background: #95a5a6;
-        }
-
-        .btn-secondary:hover {
-            background: #7f8c8d;
-        }
-
-        .form-section {
-            background: #f8f9fa;
-            border-radius: 6px;
-            padding: 25px;
-            margin-top: 20px;
-            border: 1px solid #e9ecef;
-        }
-
-        .form-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: #2c3e50;
-            text-align: center;
-        }
-
-        .campo-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .campo-item input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-            transition: all 0.2s ease;
-            background: white;
-        }
-
-        .campo-item input:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
-        }
-
-        .btn-add-campo {
-            background: #27ae60;
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            font-size: 20px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .btn-add-campo:hover {
-            background: #229954;
-            transform: scale(1.05);
-        }
-
-        .btn-submit {
-            background: #27ae60;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 6px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            width: 100%;
-            margin-top: 20px;
-        }
-
-        .btn-submit:hover {
-            background: #229954;
-            transform: translateY(-1px);
-        }
-
-        /* Modal styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.6);
-            backdrop-filter: blur(5px);
-        }
-
-        .modal-content {
-            background: white;
-            margin: 10% auto;
-            padding: 30px;
-            border-radius: 8px;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            position: relative;
-            animation: modalSlideIn 0.3s ease-out;
-            border: 1px solid #e9ecef;
-        }
-
-        @keyframes modalSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-50px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .modal h3 {
-            color: #2c3e50;
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 25px;
-            text-align: center;
-        }
-
-        .modal label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #2c3e50;
-            font-size: 0.95rem;
-        }
-
-        .modal input {
-            width: 100%;
-            padding: 12px 16px;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-            transition: all 0.2s ease;
-            background: white;
-        }
-
-        .modal input:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
-        }
-
-        .modal-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 30px;
-        }
-
-        .modal .btn {
-            flex: 1;
-            max-width: 150px;
-        }
-
-        .close {
-            position: absolute;
-            right: 20px;
-            top: 20px;
-            color: #6c757d;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: color 0.3s ease;
-            width: 30px;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-        }
-
-        .close:hover {
-            color: #dc3545;
-            background: #f8f9fa;
-        }
-
-        .camera-select {
-            padding: 10px 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 16px;
-            margin: 10px;
-            background: white;
-        }
-
-        .camera-select:focus {
-            outline: none;
-            border-color: #3498db;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .header h1 {
-                font-size: 2rem;
-            }
-            
-            .card {
-                padding: 20px;
-            }
-            
-            .modal-content {
-                margin: 5% auto;
-                padding: 20px;
-            }
-            
-            .modal-buttons {
-                flex-direction: column;
-            }
-            
-            .modal .btn {
-                max-width: none;
-            }
-        }
-
-        /* Loading animation */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-        }
-        .btn-danger:hover {
-            background: #b52a37;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Scanner de Equipamentos</h1>
-            <p>Sistema de registro e controle de equipamentos via QR Code</p>
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row justify-content-center mb-4">
+        <div class="col-12">
+            <div class="text-center">
+                <h1 class="display-4 fw-bold text-primary mb-3">
+                    <i class="fas fa-qrcode me-3"></i>
+                    Scanner de Equipamentos
+                </h1>
+                <p class="lead text-muted">
+                    Sistema de registro e controle de equipamentos via QR Code
+                </p>
+            </div>
         </div>
+    </div>
 
-        <div class="card">
-            <div class="scanner-section">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-6">
+            <!-- Card Principal -->
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-camera me-2"></i>
+                        Scanner QR Code
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Aviso de Compatibilidade -->
+                    <div class="alert alert-warning border-0 mb-4" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Atenção:</strong> Para melhor experiência, use um dispositivo com câmera e navegador moderno.
+                    </div>
 
-    <script>
-    function isIOS() {
-        return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    }
-    function isSafari() {
-        return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    }
+                    <!-- Controles da Câmera -->
+                    <div id="camera-controls" class="text-center mb-4">
+                        <!-- Será preenchido via JavaScript -->
+                    </div>
 
-    if (isIOS() && isSafari()) {
-        document.write('<div class="camera-controls">');
-        document.write('<button class="btn" onclick="abrirCameraTraseira()">📷 Iniciar Scanner Traseiro (iOS/Safari)</button>');
-        document.write('</div>');
-        document.write('<video id="preview" autoplay playsinline></video>');
-        document.write('<canvas id="canvas" style="display:none;"></canvas>');
-        let scanning = false;
-        window.abrirCameraTraseira = function() {
-            const constraints = {
-                video: { facingMode: { exact: "environment" } }
-            };
-            navigator.mediaDevices.getUserMedia(constraints)
-                .then(function(stream) {
-                    const video = document.getElementById('preview');
-                    video.srcObject = stream;
-                    video.play();
-                    scanning = true;
-                    scanQRCode();
-                })
-                .catch(function(err) {
-                    alert("Não foi possível acessar a câmera traseira: " + err);
-                });
-        }
-        function scanQRCode() {
-            const video = document.getElementById('preview');
-            const canvas = document.getElementById('canvas');
-            const context = canvas.getContext('2d');
-            if (video.readyState === video.HAVE_ENOUGH_DATA && scanning) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, canvas.width, canvas.height);
-                if (code) {
-                    scanning = false;
-                    inserirValorNoCampo(code.data);
-                    alert('QR Code lido: ' + code.data);
-                    // Para a câmera se quiser:
-                    // video.srcObject.getTracks().forEach(track => track.stop());
-                }
-            }
-            if (scanning) {
-                requestAnimationFrame(scanQRCode);
-            }
-        }
-    } else {
-        document.write('<div class="camera-controls">');
-        document.write('<label for="camera-select">Escolha a câmera:</label>');
-        document.write('<select id="camera-select" class="camera-select"></select>');
-        document.write('<button class="btn" onclick="iniciarScanner()">Iniciar Scanner</button>');
-        document.write('</div>');
-        document.write('<video id="preview"></video>');
-        let scanner = null;
-        let camerasDisponiveis = [];
-        Instascan.Camera.getCameras().then(function(cameras) {
-            camerasDisponiveis = cameras;
-            const select = document.getElementById('camera-select');
-            cameras.forEach((cam, idx) => {
-                const option = document.createElement('option');
-                option.value = idx;
-                option.text = cam.name || `Câmera ${idx+1}`;
-                select.appendChild(option);
+                    <!-- Preview da Câmera -->
+                    <div class="text-center mb-4">
+                        <video id="preview" class="img-fluid rounded shadow" style="max-width: 400px; width: 100%; border: 2px solid #e9ecef;"></video>
+                        <canvas id="canvas" style="display:none;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card do Formulário -->
+            <div class="card shadow-lg border-0 mt-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        Registro de Equipamentos
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <form id="form-dinamico">
+                        <div id="campos-container">
+                            <div class="campo-item mb-3">
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-barcode"></i>
+                                    </span>
+                                    <input type="text" class="form-control" name="campo[]" placeholder="Digite o código do equipamento...">
+                                    <button type="button" class="btn btn-outline-primary" onclick="adicionarCampo(this)">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success btn-lg w-100">
+                            <i class="fas fa-paper-plane me-2"></i>
+                            Enviar Equipamentos
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Informações Adicionais -->
+<div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="infoModalLabel">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Informações Adicionais
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="modalForm">
+                    <div class="mb-3">
+                        <label for="peso_liquido" class="form-label fw-semibold">
+                            <i class="fas fa-weight-hanging me-2"></i>
+                            Peso Líquido (kg)
+                        </label>
+                        <input type="text" class="form-control" id="peso_liquido" name="peso_liquido" 
+                               placeholder="Ex: 10,5 ou 10.5" pattern="[0-9]*[.,]?[0-9]+">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="peso_bruto" class="form-label fw-semibold">
+                            <i class="fas fa-weight me-2"></i>
+                            Peso Bruto (kg)
+                        </label>
+                        <input type="text" class="form-control" id="peso_bruto" name="peso_bruto" 
+                               placeholder="Ex: 12,0 ou 12.0" pattern="[0-9]*[.,]?[0-9]+">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="medidas_caixa" class="form-label fw-semibold">
+                            <i class="fas fa-ruler-combined me-2"></i>
+                            Medidas da Caixa
+                        </label>
+                        <input type="text" class="form-control" id="medidas_caixa" name="medidas_caixa" 
+                               placeholder="Ex: 30x20x15cm">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="abrirConfirmacao()">
+                    <i class="fas fa-save me-2"></i>
+                    Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="confirmModalLabel">
+                    <i class="fas fa-question-circle me-2"></i>
+                    Confirmação
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p id="confirmText" class="mb-0"></p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="enviarComModal()">
+                    <i class="fas fa-check me-2"></i>
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Sucesso -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="successModalLabel">
+                    <i class="fas fa-check-circle me-2"></i>
+                    Sucesso!
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">Equipamentos salvos com sucesso!</h5>
+            </div>
+            <div class="modal-footer border-0 justify-content-center">
+                <button type="button" class="btn btn-success" onclick="fecharSucesso()">
+                    <i class="fas fa-check me-2"></i>
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://rawgit.com/schmich/instascan-builds/master/instascan.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+
+<script>
+// Detecção de dispositivo
+function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+function isSafari() {
+    return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+}
+
+// Configuração da interface baseada no dispositivo
+if (isIOS() && isSafari()) {
+    document.getElementById('camera-controls').innerHTML = `
+        <button class="btn btn-primary btn-lg" onclick="abrirCameraTraseira()">
+            <i class="fas fa-camera me-2"></i>
+            Iniciar Scanner Traseiro (iOS/Safari)
+        </button>
+    `;
+    
+    let scanning = false;
+    
+    window.abrirCameraTraseira = function() {
+        const constraints = {
+            video: { facingMode: { exact: "environment" } }
+        };
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(function(stream) {
+                const video = document.getElementById('preview');
+                video.srcObject = stream;
+                video.play();
+                scanning = true;
+                scanQRCode();
+            })
+            .catch(function(err) {
+                alert("Não foi possível acessar a câmera traseira: " + err);
             });
-        }).catch(function(e) {
-            alert('Erro ao acessar as câmeras: ' + e);
-        });
-        window.iniciarScanner = function() {
-            const select = document.getElementById('camera-select');
-            const idx = select.value ? parseInt(select.value) : 0;
-            const camera = camerasDisponiveis[idx];
-            if (!scanner) {
-                scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
-                scanner.addListener('scan', function(content) {
-                    inserirValorNoCampo(content);
-                    fetch("/registrar/", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({ codigo: content })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === "ok") {
-                            alert("Equipamento registrado com sucesso!");
-                        } else {
-                            alert("Erro ao registrar: " + data.mensagem);
-                        }
-                    });
-                    scanner.stop();
-                });
-            }
-            if (camera) {
-                scanner.start(camera);
-            } else {
-                alert("Nenhuma câmera selecionada.");
-            }
-        }
     }
-    // Funções do formulário dinâmico
-    function adicionarCampo(botao) {
-        const container = document.getElementById('campos-container');
-        const novoCampo = document.createElement('div');
-        novoCampo.className = 'campo-item';
-        novoCampo.innerHTML = `
-            <input type="text" name="campo[]" placeholder="Digite o código do equipamento...">
-            <button type="button" class="btn-add-campo" onclick="adicionarCampo(this)">+</button>
-        `;
-        container.appendChild(novoCampo);
-        botao.style.display = 'none';
-    }
-    function inserirValorNoCampo(valor) {
-        // Limpar o valor: remover tudo antes do & e o próprio &
-        let valorLimpo = valor;
-        const indexAmpersand = valor.indexOf('&');
-        if (indexAmpersand !== -1) {
-            valorLimpo = valor.substring(indexAmpersand + 1);
+    
+    function scanQRCode() {
+        const video = document.getElementById('preview');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        
+        if (video.readyState === video.HAVE_ENOUGH_DATA && scanning) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, canvas.width, canvas.height);
+            
+            if (code) {
+                scanning = false;
+                inserirValorNoCampo(code.data);
+                alert('QR Code lido: ' + code.data);
+            }
         }
         
-        const campos = document.querySelectorAll('#campos-container input[name="campo[]"]');
-        let inserido = false;
-        for (let campo of campos) {
-            if (!campo.value) {
-                campo.value = valorLimpo;
-                inserido = true;
-                break;
-            }
-        }
-        if (!inserido) {
-            adicionarCampo(document.querySelector('#campos-container .btn-add-campo:last-of-type'));
-            setTimeout(() => {
-                const novosCampos = document.querySelectorAll('#campos-container input[name="campo[]"]');
-                novosCampos[novosCampos.length-1].value = valorLimpo;
-            }, 50);
+        if (scanning) {
+            requestAnimationFrame(scanQRCode);
         }
     }
-    </script>
-
-    <!-- Formulário dinâmico -->
-    <div class="form-section">
-                        <div class="form-title">Registro de Equipamentos</div>
-        <form id="form-dinamico">
-            <div id="campos-container">
-                <div class="campo-item">
-                    <input type="text" name="campo[]" placeholder="Digite o código do equipamento...">
-                    <button type="button" class="btn-add-campo" onclick="adicionarCampo(this)">+</button>
-                </div>
-            </div>
-            <button type="submit" class="btn-submit">Enviar</button>
-        </form>
-    </div>
-
-    <!-- Modal para informações adicionais -->
-    <div id="infoModal" class="modal">
-        <div class="modal-content">
-            <span class="close btn-danger" onclick="fecharModal()">&times;</span>
-            <h3>Informações Adicionais</h3>
-            <form id="modalForm">
-                <label for="peso_liquido">Peso Líquido (kg):</label>
-                <input type="text" id="peso_liquido" name="peso_liquido" placeholder="Ex: 10,5 ou 10.5" pattern="[0-9]*[.,]?[0-9]+">
-                
-                <label for="peso_bruto">Peso Bruto (kg):</label>
-                <input type="text" id="peso_bruto" name="peso_bruto" placeholder="Ex: 12,0 ou 12.0" pattern="[0-9]*[.,]?[0-9]+">
-                
-                <label for="medidas_caixa">Medidas da Caixa:</label>
-                <input type="text" id="medidas_caixa" name="medidas_caixa" placeholder="Ex: 30x20x15cm">
-                
-                <div class="modal-buttons">
-                    <button type="button" class="btn btn-success" onclick="abrirConfirmacao()">Salvar</button>
-                    <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    <!-- Modal de confirmação -->
-    <div id="confirmModal" class="modal">
-        <div class="modal-content">
-            <h3>Confirmação</h3>
-            <p id="confirmText"></p>
-            <div class="modal-buttons">
-                <button type="button" class="btn btn-success" onclick="enviarComModal()">Confirmar</button>
-                <button type="button" class="btn btn-danger" onclick="fecharConfirmacao()">Sair</button>
+} else {
+    document.getElementById('camera-controls').innerHTML = `
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <label for="camera-select" class="form-label fw-semibold">
+                    <i class="fas fa-video me-2"></i>
+                    Escolha a câmera:
+                </label>
+                <select id="camera-select" class="form-select mb-3"></select>
+                <button class="btn btn-primary btn-lg w-100" onclick="iniciarScanner()">
+                    <i class="fas fa-play me-2"></i>
+                    Iniciar Scanner
+                </button>
             </div>
         </div>
-    </div>
-    <!-- Modal de sucesso -->
-    <div id="successModal" class="modal">
-        <div class="modal-content">
-            <h3>Equipamentos salvos com sucesso!</h3>
-            <div class="modal-buttons">
-                <button type="button" class="btn btn-success" onclick="fecharSucesso()">OK</button>
-            </div>
-        </div>
-    </div>
-    <script>
-    // Variáveis globais para armazenar os códigos
-    let codigosParaEnviar = [];
-
-    // Funções do modal
-    function abrirModal() {
-        document.getElementById('infoModal').style.display = 'block';
-    }
-
-    function fecharModal() {
-        document.getElementById('infoModal').style.display = 'none';
-        // Limpar campos do modal
-        document.getElementById('peso_liquido').value = '';
-        document.getElementById('peso_bruto').value = '';
-        document.getElementById('medidas_caixa').value = '';
-    }
-
-    function abrirConfirmacao() {
-        let pesoLiquido = document.getElementById('peso_liquido').value;
-        let pesoBruto = document.getElementById('peso_bruto').value;
-        const quantidade = codigosParaEnviar.length;
-        const texto = `Confirma a quantidade de ${quantidade} equipamentos com peso líquido ${pesoLiquido || '-'} e peso bruto ${pesoBruto || '-'}?`;
-        document.getElementById('confirmText').innerText = texto;
-        document.getElementById('confirmModal').style.display = 'block';
-    }
-
-    function fecharConfirmacao() {
-        document.getElementById('confirmModal').style.display = 'none';
-    }
-
-    function fecharSucesso() {
-        document.getElementById('successModal').style.display = 'none';
-        fecharModal();
-        // Limpar formulário
-        document.getElementById('form-dinamico').reset();
-        const container = document.getElementById('campos-container');
-        container.innerHTML = `
-            <div class="campo-item">
-                <input type="text" name="campo[]" placeholder="Digite o código do equipamento...">
-                <button type="button" class="btn-add-campo" onclick="adicionarCampo(this)">+</button>
-            </div>
-        `;
-    }
-
-    function enviarComModal() {
-        fecharConfirmacao();
-        let pesoLiquido = document.getElementById('peso_liquido').value;
-        let pesoBruto = document.getElementById('peso_bruto').value;
-        const medidasCaixa = document.getElementById('medidas_caixa').value;
-        // Converter vírgula para ponto nos campos de peso
-        if (pesoLiquido) {
-            pesoLiquido = pesoLiquido.replace(',', '.');
-            if (isNaN(parseFloat(pesoLiquido))) {
-                alert('Peso líquido deve ser um número válido (ex: 10,5 ou 10.5)');
-                return;
-            }
-        }
-        if (pesoBruto) {
-            pesoBruto = pesoBruto.replace(',', '.');
-            if (isNaN(parseFloat(pesoBruto))) {
-                alert('Peso bruto deve ser um número válido (ex: 12,0 ou 12.0)');
-                return;
-            }
-        }
-        const dados = {
-            codigos: codigosParaEnviar,
-            peso_liquido: pesoLiquido || null,
-            peso_bruto: pesoBruto || null,
-            medidas_caixa: medidasCaixa || null
-        };
-        fetch(window.location.origin + "/scanner/registrar/", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(dados)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === "ok") {
-                document.getElementById('successModal').style.display = 'block';
-            } else {
-                alert("Erro ao registrar: " + data.mensagem);
-            }
-        })
-        .catch(error => {
-            alert("Erro ao enviar dados para o backend.");
+    `;
+    
+    let scanner = null;
+    let camerasDisponiveis = [];
+    
+    Instascan.Camera.getCameras().then(function(cameras) {
+        camerasDisponiveis = cameras;
+        const select = document.getElementById('camera-select');
+        cameras.forEach((cam, idx) => {
+            const option = document.createElement('option');
+            option.value = idx;
+            option.text = cam.name || `Câmera ${idx+1}`;
+            select.appendChild(option);
         });
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        document.getElementById('form-dinamico').onsubmit = function(e) {
-            e.preventDefault();
-            const campos = Array.from(document.querySelectorAll('#campos-container input[name=\"campo[]\"]'))
-                .map(input => input.value)
-                .filter(val => val.trim() !== "");
-            console.log("Enviando para o backend:", campos);
-            if (campos.length === 0) {
-                alert("Preencha pelo menos um campo!");
-                return;
-            }
-            
-            // Armazenar códigos e abrir modal
-            codigosParaEnviar = campos;
-            abrirModal();
-        };
-
-        // Fechar modal quando clicar fora dele
-        window.onclick = function(event) {
-            const modal = document.getElementById('infoModal');
-            if (event.target == modal) {
-                fecharModal();
-            }
-        }
+    }).catch(function(e) {
+        alert('Erro ao acessar as câmeras: ' + e);
     });
-    </script>
+    
+    window.iniciarScanner = function() {
+        const select = document.getElementById('camera-select');
+        const idx = select.value ? parseInt(select.value) : 0;
+        const camera = camerasDisponiveis[idx];
+        
+        if (!scanner) {
+            scanner = new Instascan.Scanner({ video: document.getElementById('preview') });
+            scanner.addListener('scan', function(content) {
+                inserirValorNoCampo(content);
+                fetch("/registrar/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ codigo: content })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "ok") {
+                        alert("Equipamento registrado com sucesso!");
+                    } else {
+                        alert("Erro ao registrar: " + data.mensagem);
+                    }
+                });
+                scanner.stop();
+            });
+        }
+        
+        if (camera) {
+            scanner.start(camera);
+        } else {
+            alert("Nenhuma câmera selecionada.");
+        }
+    }
+}
 
-</body>
+// Funções do formulário dinâmico
+function adicionarCampo(botao) {
+    const container = document.getElementById('campos-container');
+    const novoCampo = document.createElement('div');
+    novoCampo.className = 'campo-item mb-3';
+    novoCampo.innerHTML = `
+        <div class="input-group">
+            <span class="input-group-text">
+                <i class="fas fa-barcode"></i>
+            </span>
+            <input type="text" class="form-control" name="campo[]" placeholder="Digite o código do equipamento...">
+            <button type="button" class="btn btn-outline-primary" onclick="adicionarCampo(this)">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(novoCampo);
+    botao.style.display = 'none';
+}
+
+function inserirValorNoCampo(valor) {
+    // Limpar o valor: remover tudo antes do & e o próprio &
+    let valorLimpo = valor;
+    const indexAmpersand = valor.indexOf('&');
+    if (indexAmpersand !== -1) {
+        valorLimpo = valor.substring(indexAmpersand + 1);
+    }
+    
+    const campos = document.querySelectorAll('#campos-container input[name="campo[]"]');
+    let inserido = false;
+    
+    for (let campo of campos) {
+        if (!campo.value) {
+            campo.value = valorLimpo;
+            inserido = true;
+            break;
+        }
+    }
+    
+    if (!inserido) {
+        adicionarCampo(document.querySelector('#campos-container .btn-outline-primary:last-of-type'));
+        setTimeout(() => {
+            const novosCampos = document.querySelectorAll('#campos-container input[name="campo[]"]');
+            novosCampos[novosCampos.length-1].value = valorLimpo;
+        }, 50);
+    }
+}
+
+// Variáveis globais para armazenar os códigos
+let codigosParaEnviar = [];
+
+// Funções do modal
+function abrirModal() {
+    const modal = new bootstrap.Modal(document.getElementById('infoModal'));
+    modal.show();
+}
+
+function fecharModal() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('infoModal'));
+    modal.hide();
+    
+    // Limpar campos do modal
+    document.getElementById('peso_liquido').value = '';
+    document.getElementById('peso_bruto').value = '';
+    document.getElementById('medidas_caixa').value = '';
+}
+
+function abrirConfirmacao() {
+    let pesoLiquido = document.getElementById('peso_liquido').value;
+    let pesoBruto = document.getElementById('peso_bruto').value;
+    const quantidade = codigosParaEnviar.length;
+    const texto = `Confirma a quantidade de ${quantidade} equipamentos com peso líquido ${pesoLiquido || '-'} e peso bruto ${pesoBruto || '-'}?`;
+    
+    document.getElementById('confirmText').innerText = texto;
+    
+    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    modal.show();
+}
+
+function fecharConfirmacao() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+    modal.hide();
+}
+
+function fecharSucesso() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('successModal'));
+    modal.hide();
+    fecharModal();
+    
+    // Limpar formulário
+    document.getElementById('form-dinamico').reset();
+    const container = document.getElementById('campos-container');
+    container.innerHTML = `
+        <div class="campo-item mb-3">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="fas fa-barcode"></i>
+                </span>
+                <input type="text" class="form-control" name="campo[]" placeholder="Digite o código do equipamento...">
+                <button type="button" class="btn btn-outline-primary" onclick="adicionarCampo(this)">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function enviarComModal() {
+    fecharConfirmacao();
+    
+    let pesoLiquido = document.getElementById('peso_liquido').value;
+    let pesoBruto = document.getElementById('peso_bruto').value;
+    const medidasCaixa = document.getElementById('medidas_caixa').value;
+    
+    // Converter vírgula para ponto nos campos de peso
+    if (pesoLiquido) {
+        pesoLiquido = pesoLiquido.replace(',', '.');
+        if (isNaN(parseFloat(pesoLiquido))) {
+            alert('Peso líquido deve ser um número válido (ex: 10,5 ou 10.5)');
+            return;
+        }
+    }
+    
+    if (pesoBruto) {
+        pesoBruto = pesoBruto.replace(',', '.');
+        if (isNaN(parseFloat(pesoBruto))) {
+            alert('Peso bruto deve ser um número válido (ex: 12,0 ou 12.0)');
+            return;
+        }
+    }
+    
+    const dados = {
+        codigos: codigosParaEnviar,
+        peso_liquido: pesoLiquido || null,
+        peso_bruto: pesoBruto || null,
+        medidas_caixa: medidasCaixa || null
+    };
+    
+    fetch(window.location.origin + "/scanner/registrar/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(dados)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "ok") {
+            const modal = new bootstrap.Modal(document.getElementById('successModal'));
+            modal.show();
+        } else {
+            alert("Erro ao registrar: " + data.mensagem);
+        }
+    })
+    .catch(error => {
+        alert("Erro ao enviar dados para o backend.");
+    });
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('form-dinamico').onsubmit = function(e) {
+        e.preventDefault();
+        
+        const campos = Array.from(document.querySelectorAll('#campos-container input[name="campo[]"]'))
+            .map(input => input.value)
+            .filter(val => val.trim() !== "");
+        
+        console.log("Enviando para o backend:", campos);
+        
+        if (campos.length === 0) {
+            alert("Preencha pelo menos um campo!");
+            return;
+        }
+        
+        // Armazenar códigos e abrir modal
+        codigosParaEnviar = campos;
+        abrirModal();
+    };
+});
+</script>
+
+<style>
+/* Estilos customizados para o scanner */
+.campo-item .input-group {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.campo-item .form-control {
+    border: none;
+    padding: 0.75rem 1rem;
+}
+
+.campo-item .form-control:focus {
+    box-shadow: none;
+    border-color: transparent;
+}
+
+.campo-item .input-group-text {
+    background: linear-gradient(135deg, #0d6efd, #0056b3);
+    color: white;
+    border: none;
+    font-weight: 500;
+}
+
+.campo-item .btn-outline-primary {
+    border: none;
+    background: #f8f9fa;
+    color: #0d6efd;
+    transition: all 0.3s ease;
+}
+
+.campo-item .btn-outline-primary:hover {
+    background: #0d6efd;
+    color: white;
+    transform: scale(1.05);
+}
+
+#preview {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.modal-content {
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.modal-header {
+    border-bottom: none;
+    padding: 1.5rem;
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-footer {
+    padding: 1.5rem;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .lead {
+        font-size: 1rem;
+    }
+    
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+}
+</style>
 {% endblock %}
