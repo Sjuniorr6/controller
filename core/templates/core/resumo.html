@@ -1,29 +1,147 @@
 {% extends "base.html" %}
 
 {% block content %}
-    <h1>Resumo</h1>
-    <p>Esta é a página de resumo.</p>
+<div class="container">
+    <!-- Hero Section -->
+    <div class="hero-section position-relative overflow-hidden rounded-4 shadow-lg mb-5">
+        <div class="hero-background position-absolute w-100 h-100"></div>
+        <div class="hero-overlay position-absolute w-100 h-100"></div>
+        
+        <div class="hero-content position-relative z-3 text-center text-white py-5 px-4">
+            <div class="container">
+                <h1 class="display-4 fw-bold mb-4 text-shadow">
+                    <i class="fas fa-chart-bar me-3 text-warning"></i>
+                    Resumo Geral
+                </h1>
+                <p class="lead mb-5 text-white-50">
+                    Visão geral dos equipamentos e status do sistema
+                </p>
+            </div>
+        </div>
+    </div>
 
     <!-- Resumo dos Equipamentos -->
-    <div id="summary-container">
-        <h5 class="text-center mb-3">📊 Resumo dos Equipamentos</h5>
-        <table class="table table-bordered text-center">
-            <thead class="table-dark">
-                <tr>
-                    <th>🚚 Em Viagem</th>
-                    <th>📍 No Destino</th>
-                    <th>🏡 Na Fazenda</th>
-                    <th>🏢 Estoque Golden</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>{{ count_viagem }}</td>
-                    <td>{{ count_destino }}</td>
-                    <td>{{ count_fazenda }}</td>
-                    <td>{{ count_golden }}</td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10">
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Resumo dos Equipamentos
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="table-responsive">
+                        <table class="table table-hover text-center">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th><i class="fas fa-truck me-2"></i>Em Viagem</th>
+                                    <th><i class="fas fa-map-marker-alt me-2"></i>No Destino</th>
+                                    <th><i class="fas fa-home me-2"></i>Na Fazenda</th>
+                                    <th><i class="fas fa-warehouse me-2"></i>Estoque Golden</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="table-light">
+                                    <td class="fw-bold fs-4 text-primary">{{ count_viagem }}</td>
+                                    <td class="fw-bold fs-4 text-success">{{ count_destino }}</td>
+                                    <td class="fw-bold fs-4 text-warning">{{ count_fazenda }}</td>
+                                    <td class="fw-bold fs-4 text-info">{{ count_golden }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+</div>
+
+<style>
+/* Hero Section */
+.hero-section {
+    min-height: 300px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+.hero-background {
+    background: url('/static/images/FundoHome.png') no-repeat center center;
+    background-size: cover;
+    filter: brightness(0.3);
+}
+
+.hero-overlay {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.8) 0%, rgba(139, 92, 246, 0.8) 100%);
+}
+
+.hero-content {
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-shadow {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.z-3 {
+    z-index: 3;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .hero-section {
+        min-height: 250px;
+    }
+    
+    .hero-content {
+        min-height: 250px;
+    }
+    
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .lead {
+        font-size: 1rem;
+    }
+    
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    .table th, .table td {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .hero-section {
+        min-height: 200px;
+    }
+    
+    .hero-content {
+        min-height: 200px;
+    }
+    
+    .display-4 {
+        font-size: 1.75rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .table th, .table td {
+        padding: 0.25rem 0.125rem;
+        font-size: 0.75rem;
+    }
+    
+    .fs-4 {
+        font-size: 1.25rem !important;
+    }
+}
+</style>
 {% endblock %}

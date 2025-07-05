@@ -19,7 +19,7 @@
     </div>
 
     <div class="row justify-content-center">
-        <div class="col-lg-8 col-xl-6">
+        <div class="col-12 col-lg-8 col-xl-6">
             <!-- Card Principal -->
             <div class="card shadow-lg border-0">
                 <div class="card-header bg-primary text-white">
@@ -42,7 +42,7 @@
 
                     <!-- Preview da Câmera -->
                     <div class="text-center mb-4">
-                        <video id="preview" class="img-fluid rounded shadow" style="max-width: 400px; width: 100%; border: 2px solid #e9ecef;"></video>
+                        <video id="preview" class="img-fluid rounded shadow" style="max-width: 400px; width: 100%; border: 2px solid #e9ecef; min-height: 300px;"></video>
                         <canvas id="canvas" style="display:none;"></canvas>
                     </div>
                 </div>
@@ -585,6 +585,56 @@ document.addEventListener('DOMContentLoaded', function() {
     
     .modal-body {
         padding: 1.5rem;
+    }
+
+    #preview {
+        min-height: 250px;
+        max-width: 100%;
+    }
+
+    .input-group {
+        flex-direction: column;
+    }
+
+    .input-group .form-control {
+        border-radius: 8px 8px 0 0 !important;
+        margin-bottom: 1px;
+    }
+
+    .input-group .btn {
+        border-radius: 0 0 8px 8px !important;
+        width: 100%;
+    }
+
+    .input-group-text {
+        border-radius: 8px 8px 0 0 !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .display-4 {
+        font-size: 1.75rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+
+    #preview {
+        min-height: 200px;
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .modal-dialog {
+        margin: 0.5rem;
     }
 }
 </style>

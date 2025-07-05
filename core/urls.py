@@ -7,7 +7,8 @@ from .views import (
     equipamento_listcarmo_view, MapaView, get_t42_data, get_assetscontrols_data,
     AltocafezalCreateView, equipamento_list_view, burbomcofeCreateView,
     equipamento_listburbom_view, equipamento_listnkg_view, equipamento_listvelosocofe_view,
-    update_assetscontrols_data, update_t42_data, verificar_fdoor,eventos_recentes,alertas_api
+    update_assetscontrols_data, update_t42_data, verificar_fdoor,eventos_recentes,alertas_api,
+    eventos_list_view, tratar_evento, excluir_evento, detalhes_evento, exportar_eventos
 )
 
 
@@ -51,4 +52,11 @@ urlpatterns = [
      path('verificar-fdoor/', verificar_fdoor, name='verificar_fdoor'),
      path("api/eventos-recentes/", eventos_recentes, name="eventos_recentes"),
      path("api/alertas/", alertas_api, name="alertas_api"),
+     
+     # Eventos
+     path("eventos/", eventos_list_view, name="eventos"),
+     path("api/eventos/<int:evento_id>/tratar/", tratar_evento, name="tratar_evento"),
+     path("api/eventos/<int:evento_id>/excluir/", excluir_evento, name="excluir_evento"),
+     path("api/eventos/<int:evento_id>/detalhes/", detalhes_evento, name="detalhes_evento"),
+     path("api/eventos/export/", exportar_eventos, name="exportar_eventos"),
 ]

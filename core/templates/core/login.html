@@ -55,19 +55,19 @@ body::before {
 }
 
 /* Cabeçalho do card */
-.card-header {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    color: white;
-    text-align: center;
-    font-size: 1.8rem; /* Aumentando o tamanho da fonte */
-    font-weight: bold;
-    padding: 20px;
-    border-radius: 15px 15px 0 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
+        .card-header {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            text-align: center;
+            font-size: 1.8rem; /* Aumentando o tamanho da fonte */
+            font-weight: bold;
+            padding: 20px;
+            border-radius: 15px 15px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
 
 /* Campos de entrada */
 .form-control {
@@ -82,26 +82,26 @@ body::before {
     padding: 12px;
 }
 
-.form-control:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 10px rgba(0, 123, 255, 0.5);
-}
+        .form-control:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
 
 /* Botão de login */
-.btn-primary {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-    border: none;
-    height: 55px; /* Aumentando a altura do botão */
-    font-size: 1.2rem; /* Aumentando o tamanho da fonte */
-    font-weight: bold;
-    border-radius: 10px;
-    transition: all 0.3s ease-in-out;
-}
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: none;
+            height: 55px; /* Aumentando a altura do botão */
+            font-size: 1.2rem; /* Aumentando o tamanho da fonte */
+            font-weight: bold;
+            border-radius: 10px;
+            transition: all 0.3s ease-in-out;
+        }
 
-.btn-primary:hover {
-    background: linear-gradient(135deg, #0056b3, #00408a);
-    transform: scale(1.03);
-}
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            transform: scale(1.03);
+        }
 
 /* Animação dos campos de entrada */
 @keyframes fadeSlideIn {
@@ -141,13 +141,60 @@ body::before {
 }
 
 /* Responsividade */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
     .login-container {
-        max-width: 90%;
+        max-width: 95%;
+        padding: 0 1rem;
     }
 
     .card-header {
         font-size: 1.6rem;
+        padding: 15px;
+    }
+
+    .card {
+        padding: 20px;
+    }
+
+    .form-control {
+        height: 50px;
+        font-size: 1rem;
+    }
+
+    .btn-primary {
+        height: 50px;
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .login-container {
+        max-width: 100%;
+        padding: 0 0.5rem;
+    }
+
+    .card-header {
+        font-size: 1.4rem;
+        padding: 12px;
+    }
+
+    .card {
+        padding: 15px;
+    }
+
+    .form-control {
+        height: 45px;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary {
+        height: 45px;
+        font-size: 1rem;
+    }
+
+    .alert {
+        font-size: 14px;
+        padding: 10px;
     }
 }
 

@@ -17,16 +17,30 @@
 
     <style>
         :root {
-            --primary-color: #0d6efd;
-            --secondary-color: #6c757d;
-            --success-color: #198754;
-            --danger-color: #dc3545;
-            --warning-color: #ffc107;
-            --info-color: #0dcaf0;
-            --light-color: #f8f9fa;
-            --dark-color: #212529;
-            --navbar-bg: #ffffff;
-            --navbar-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary-color: #64748b;
+            --success-color: #10b981;
+            --success-dark: #059669;
+            --danger-color: #ef4444;
+            --danger-dark: #dc2626;
+            --warning-color: #f59e0b;
+            --warning-dark: #d97706;
+            --info-color: #06b6d4;
+            --info-dark: #0891b2;
+            --light-color: #f1f5f9;
+            --dark-color: #0f172a;
+            --dark-light: #1e293b;
+            --navbar-bg: rgba(15, 23, 42, 0.95);
+            --navbar-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            --hover-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+            --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            --gradient-success: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+            --gradient-danger: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+            --gradient-info: linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%);
+            --gradient-dark: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
         }
 
         * {
@@ -37,18 +51,20 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            background-attachment: fixed;
             min-height: 100vh;
-            color: var(--dark-color);
+            color: var(--light-color);
             line-height: 1.6;
         }
 
         /* Navbar Moderna */
         .navbar {
             background: var(--navbar-bg) !important;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             box-shadow: var(--navbar-shadow);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             padding: 0.75rem 1rem;
             transition: all 0.3s ease;
         }
@@ -68,7 +84,7 @@
         }
 
         .navbar-nav .nav-link {
-            color: var(--dark-color) !important;
+            color: var(--light-color) !important;
             font-weight: 500;
             padding: 0.75rem 1rem !important;
             border-radius: 8px;
@@ -80,14 +96,15 @@
         }
 
         .navbar-nav .nav-link:hover {
-            background: rgba(13, 110, 253, 0.1);
-            color: var(--primary-color) !important;
+            background: rgba(99, 102, 241, 0.2);
+            color: #a5b4fc !important;
             transform: translateY(-1px);
         }
 
         .navbar-nav .nav-link.active {
-            background: var(--primary-color);
+            background: var(--gradient-primary);
             color: white !important;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
         }
 
         .navbar-toggler {
@@ -102,7 +119,7 @@
         }
 
         .btn-logout {
-            background: var(--danger-color);
+            background: var(--gradient-danger);
             border: none;
             color: white;
             padding: 0.75rem 1.5rem;
@@ -115,9 +132,9 @@
         }
 
         .btn-logout:hover {
-            background: #c82333;
+            background: linear-gradient(135deg, var(--danger-dark), #ff6b6b);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
         }
 
         /* Conteúdo Principal */
@@ -125,24 +142,48 @@
             margin-top: 80px;
             padding: 2rem 1rem;
             min-height: calc(100vh - 80px);
+            background: rgba(30, 41, 59, 0.3);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            margin: 80px 1rem 1rem 1rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         /* Cards Modernos */
         .card {
             border: none;
             border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            box-shadow: var(--card-shadow);
             transition: all 0.3s ease;
             overflow: hidden;
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--light-color);
+        }
+
+        .card-body {
+            color: var(--light-color);
+        }
+
+        .card-title {
+            color: var(--light-color);
+        }
+
+        .card-text {
+            color: rgba(255, 255, 255, 0.8);
         }
 
         .card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+            box-shadow: var(--hover-shadow);
         }
 
         .card-header {
-            background: linear-gradient(135deg, var(--primary-color), #0056b3);
+            background: var(--gradient-primary);
             color: white;
             border: none;
             padding: 1.5rem;
@@ -171,28 +212,49 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary-color), #0056b3);
+            background: var(--gradient-primary);
         }
 
         .btn-success {
-            background: linear-gradient(135deg, var(--success-color), #146c43);
+            background: var(--gradient-success);
         }
 
         .btn-danger {
-            background: linear-gradient(135deg, var(--danger-color), #c82333);
+            background: var(--gradient-danger);
+        }
+
+        .btn-warning {
+            background: var(--gradient-warning);
+        }
+
+        .btn-info {
+            background: var(--gradient-info);
         }
 
         /* Formulários Modernos */
         .form-control, .form-select {
             border-radius: 8px;
-            border: 2px solid #e9ecef;
+            border: 2px solid rgba(255, 255, 255, 0.2);
             padding: 0.75rem 1rem;
             transition: all 0.3s ease;
+            background: rgba(30, 41, 59, 0.5);
+            color: var(--light-color);
         }
 
         .form-control:focus, .form-select:focus {
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+            box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+            background: rgba(30, 41, 59, 0.8);
+            color: var(--light-color);
+        }
+
+        .form-control::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .form-label {
+            color: var(--light-color);
+            font-weight: 500;
         }
 
         /* Alertas Modernos */
@@ -201,6 +263,33 @@
             border: none;
             padding: 1rem 1.5rem;
             margin-bottom: 1rem;
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+        }
+
+        .alert-danger {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+
+        .alert-warning {
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #fbbf24;
+        }
+
+        .alert-info {
+            background: rgba(6, 182, 212, 0.2);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            color: #22d3ee;
         }
 
         /* Responsividade */
@@ -215,10 +304,42 @@
             
             .main-content {
                 padding: 1rem 0.5rem;
+                margin: 70px 0.5rem 0.5rem 0.5rem;
+                border-radius: 15px;
             }
             
             .card-body {
                 padding: 1.5rem;
+            }
+
+            .navbar {
+                padding: 0.5rem 0.75rem;
+            }
+
+            .navbar-nav .nav-link {
+                padding: 0.5rem 0.75rem !important;
+                margin: 0.25rem 0;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .main-content {
+                padding: 0.75rem 0.25rem;
+                margin: 60px 0.25rem 0.25rem 0.25rem;
+                border-radius: 12px;
+            }
+
+            .card-body {
+                padding: 1rem;
+            }
+
+            .navbar-brand {
+                font-size: 1.1rem;
+            }
+
+            .btn {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
             }
         }
 
@@ -438,6 +559,21 @@ function salvarUltimoId(id) {
   }
 }
 
+function podeMostrarAlerta(guid, tipo_evento, valor, dataCriacao) {
+  const agora = new Date();
+  const dataAlerta = new Date(dataCriacao);
+  const tempoPassado = agora - dataAlerta;
+  const doisMinutos = 2 * 60 * 1000; // 2 minutos em millisegundos
+  
+  // Se o alerta foi criado há mais de 2 minutos, não mostra
+  if (tempoPassado > doisMinutos) {
+    console.log(`⏰ Alerta antigo: ${guid} ${tipo_evento} ${valor} - criado há ${Math.round(tempoPassado/1000/60)} min - não alertando`);
+    return false;
+  }
+  
+  return true;
+}
+
 /* ------------------ 2. POP-UP ------------------ */
 function showAlertasLista(eventos) {
   if (!eventos.length) return;
@@ -454,7 +590,7 @@ function showAlertasLista(eventos) {
 
   let html = `<div class="alertas-header">
                 <div class="alertas-title">🚨 ALERTAS DETECTADOS</div>
-                <div class="alertas-subtitle">${eventos.length} evento(s)</div>
+                <div class="alertas-subtitle">${eventos.length} evento(s) • Cooldown: 2 min</div>
               </div><ul class="alertas-list">`;
 
   eventos.forEach(ev => {
@@ -465,6 +601,11 @@ function showAlertasLista(eventos) {
     const prev = estadosAnteriores.get(ev.guid) || {};
     if (ev.tipo_evento === "door"  && prev.porta === ev.valor) return;
     if (ev.tipo_evento === "light" && prev.luz   === ev.valor) return;
+
+    /* 2c) verifica se pode mostrar alerta (criado há menos de 2 min) */
+    if (!podeMostrarAlerta(ev.guid, ev.tipo_evento, ev.valor, ev.data)) {
+      return;
+    }
 
     // ----- montar alert -----
     const cls  = ev.tipo_evento === "door"
@@ -556,6 +697,12 @@ window.addEventListener("load", () => {
                         <a class="nav-link" href="/scanner/">
                             <i class="fas fa-qrcode"></i>
                             Scanner
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'eventos' %}active{% endif %}" href="{% url 'eventos' %}">
+                            <i class="fas fa-list-alt"></i>
+                            Eventos
                         </a>
                     </li>
                 </ul>

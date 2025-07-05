@@ -7,12 +7,12 @@
     
     <!-- FILTROS NO TOPO -->
     <div class="row mb-3">
-        <div class="col-md-12">
+        <div class="col-12">
             <div class="card p-3 shadow-sm">
                 <div class="row g-3 align-items-center">
                     
                     <!-- Campo de busca -->
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
                             <input type="text" id="searchInput" class="form-control" placeholder="Buscar equipamento por ID..." onkeyup="filtrarEquipamentosComDebounce()" onchange="filtrarEquipamentosComDebounce()">
@@ -27,7 +27,7 @@
 
     <!-- MAPA -->
     <div class="row" style="margin-bottom:0;">
-        <div class="col-md-12" style="padding-bottom:0;">
+        <div class="col-12" style="padding-bottom:0;">
             <div style="height: 60vh; border-radius:0; margin-bottom:0; box-shadow:none; padding-bottom:0;">
                 <div id="map" class="w-100 h-100" style="border-radius:0;"></div>
             </div>
@@ -36,7 +36,7 @@
 
     <!-- TABELA DE RESULTADOS (embaixo do mapa) -->
     <div class="row" style="margin-top:0;">
-        <div class="col-md-12" style="padding-top:0;">
+        <div class="col-12" style="padding-top:0;">
             <div id="resultadosTabela" style="max-height: 35vh; overflow-y: auto; border-radius:0; box-shadow:none; margin-top:0; padding-top:0;">
                 <div class="card-header bg-primary text-white py-2" style="border-radius:0; margin-top:0; padding-top:0;">
                     <h6 class="mb-0"><i class="fas fa-list"></i> Informações do Equipamento</h6>
@@ -198,6 +198,80 @@
     .table-responsive {
         max-height: 150px;
         overflow-y: auto;
+    }
+
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .container-fluid {
+            padding: 0.5rem;
+        }
+        
+        #map {
+            height: 50vh !important;
+        }
+        
+        #resultadosTabela {
+            max-height: 40vh !important;
+        }
+        
+        .table th, .table td {
+            padding: 4px 2px;
+            font-size: 0.75rem;
+        }
+        
+        .card-header h6 {
+            font-size: 0.8rem;
+        }
+        
+        .input-group {
+            flex-direction: column;
+        }
+        
+        .input-group .form-control {
+            border-radius: 8px 8px 0 0 !important;
+            margin-bottom: 1px;
+        }
+        
+        .input-group .btn {
+            border-radius: 0 0 8px 8px !important;
+            width: 100%;
+        }
+        
+        .input-group-text {
+            border-radius: 8px 8px 0 0 !important;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .container-fluid {
+            padding: 0.25rem;
+        }
+        
+        #map {
+            height: 45vh !important;
+        }
+        
+        #resultadosTabela {
+            max-height: 45vh !important;
+        }
+        
+        .table th, .table td {
+            padding: 2px 1px;
+            font-size: 0.7rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.8rem;
+        }
+        
+        .modal-dialog {
+            margin: 0.5rem;
+        }
+        
+        .card {
+            padding: 0.5rem !important;
+        }
     }
     
     .table-responsive::-webkit-scrollbar {

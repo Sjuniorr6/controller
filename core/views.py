@@ -802,3 +802,243 @@ def alertas_api(request):
         "ultimo_id" : eventos[-1]["id"] if eventos else last_id,
         "eventos"   : eventos,
     })
+
+
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+import json
+
+def eventos_list_view(request):
+    """
+    View para listar todos os eventos com paginação e filtros
+    """
+    # Parâmetros de filtro
+    status_filter = request.GET.get('status', '')
+    tipo_filter = request.GET.get('tipo', '')
+    guid_filter = request.GET.get('guid', '')
+    acao_filter = request.GET.get('acao', '')
+    
+    # Query base
+    eventos = EventoTratado.objects.all()
+    
+    # Aplicar filtros
+    if status_filter:
+        if status_filter == 'pendente':
+            eventos = eventos.filter(alerta_disparado=False)
+        elif status_filter == 'tratado':
+            eventos = eventos.filter(alerta_disparado=True)
+    
+    if tipo_filter:
+        eventos = eventos.filter(tipo_evento__icontains=tipo_filter)
+    
+    if guid_filter:
+        eventos = eventos.filter(guid__icontains=guid_filter)
+    
+    if acao_filter:
+        eventos = eventos.filter(acao_tomada=acao_filter)
+    
+    # Ordenar por data de criação (mais recentes primeiro)
+    eventos = eventos.order_by('-criado_em')
+    
+    # Paginação
+    paginator = Paginator(eventos, 20)  # 20 eventos por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Estatísticas
+    total_eventos = eventos.count()
+    pendentes = eventos.filter(alerta_disparado=False).count()
+    tratados = eventos.filter(alerta_disparado=True).count()
+    
+    # Adiciona informações de tratamento aos eventos
+    for evento in page_obj:
+        if evento.alerta_disparado and evento.tratado_em:
+            evento.tempo_tratamento = evento.tratado_em - evento.criado_em
+    
+    context = {
+        'eventos': page_obj,
+        'total_eventos': total_eventos,
+        'pendentes': pendentes,
+        'tratados': tratados,
+        'status_filter': status_filter,
+        'tipo_filter': tipo_filter,
+        'guid_filter': guid_filter,
+        'acao_filter': acao_filter,
+    }
+    
+    return render(request, 'core/eventos.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def tratar_evento(request, evento_id):
+    """
+    Marca um evento como tratado
+    """
+    try:
+        evento = EventoTratado.objects.get(id=evento_id)
+        
+        # Se já foi tratado, retorna erro
+        if evento.alerta_disparado:
+            return JsonResponse({
+                'success': False,
+                'error': 'Evento já foi tratado'
+            })
+        
+        # Pega os dados do request
+        data = json.loads(request.body)
+        observacoes = data.get('observacoes', '')
+        acao_tomada = data.get('acao_tomada', 'verificado')
+        
+        # Marca como tratado
+        evento.marcar_como_tratado(
+            tratado_por=request.user.username,
+            observacoes=observacoes,
+            acao_tomada=acao_tomada
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Evento marcado como tratado com sucesso',
+            'evento': {
+                'id': evento.id,
+                'tratado_em': evento.tratado_em.isoformat() if evento.tratado_em else None,
+                'tratado_por': evento.tratado_por,
+                'acao_tomada': evento.acao_tomada
+            }
+        })
+        
+    except EventoTratado.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Evento não encontrado'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erro ao tratar evento: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["DELETE"])
+@csrf_exempt
+def excluir_evento(request, evento_id):
+    """
+    Exclui um evento
+    """
+    try:
+        evento = EventoTratado.objects.get(id=evento_id)
+        evento.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Evento excluído com sucesso'
+        })
+        
+    except EventoTratado.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Evento não encontrado'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erro ao excluir evento: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def detalhes_evento(request, evento_id):
+    """
+    Retorna detalhes de um evento específico
+    """
+    try:
+        evento = EventoTratado.objects.get(id=evento_id)
+        
+        return JsonResponse({
+            'success': True,
+            'evento': {
+                'id': evento.id,
+                'guid': evento.guid,
+                'tipo_evento': evento.tipo_evento,
+                'valor': evento.valor,
+                'criado_em': evento.criado_em.isoformat(),
+                'alerta_disparado': evento.alerta_disparado,
+                'tratado_em': evento.tratado_em.isoformat() if evento.tratado_em else None,
+                'tratado_por': evento.tratado_por,
+                'observacoes': evento.observacoes,
+                'acao_tomada': evento.acao_tomada
+            }
+        })
+        
+    except EventoTratado.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Evento não encontrado'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': f'Erro ao buscar detalhes: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def exportar_eventos(request):
+    """
+    Exporta eventos filtrados para CSV
+    """
+    import csv
+    from django.http import HttpResponse
+    
+    # Aplica os mesmos filtros da view de listagem
+    status_filter = request.GET.get('status', '')
+    tipo_filter = request.GET.get('tipo', '')
+    guid_filter = request.GET.get('guid', '')
+    
+    eventos = EventoTratado.objects.all()
+    
+    if status_filter:
+        if status_filter == 'pendente':
+            eventos = eventos.filter(alerta_disparado=False)
+        elif status_filter == 'tratado':
+            eventos = eventos.filter(alerta_disparado=True)
+    
+    if tipo_filter:
+        eventos = eventos.filter(tipo_evento__icontains=tipo_filter)
+    
+    if guid_filter:
+        eventos = eventos.filter(guid__icontains=guid_filter)
+    
+    eventos = eventos.order_by('-criado_em')
+    
+    # Cria a resposta HTTP com CSV
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="eventos_{now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID', 'GUID', 'Tipo Evento', 'Valor', 'Criado em', 
+        'Status', 'Tratado em', 'Tratado por', 'Ação tomada', 'Observações'
+    ])
+    
+    for evento in eventos:
+        writer.writerow([
+            evento.id,
+            evento.guid,
+            evento.tipo_evento,
+            evento.valor,
+            evento.criado_em.strftime('%d/%m/%Y %H:%M:%S'),
+            'Tratado' if evento.alerta_disparado else 'Pendente',
+            evento.tratado_em.strftime('%d/%m/%Y %H:%M:%S') if evento.tratado_em else '',
+            evento.tratado_por or '',
+            evento.acao_tomada or '',
+            evento.observacoes or ''
+        ])
+    
+    return response
