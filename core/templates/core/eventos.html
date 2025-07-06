@@ -18,11 +18,11 @@
                     <p class="text-white-50 mb-0">Visualize todos os eventos e alertas registrados no sistema</p>
                 </div>
                 <div class="d-flex gap-2">
-                    <button class="btn btn-outline-primary" onclick="exportarEventos()">
+                    <button type="button" class="btn btn-outline-primary" onclick="exportarEventos()">
                         <i class="fas fa-download me-2"></i>
                         Exportar
                     </button>
-                    <button class="btn btn-outline-success" onclick="verificarNovosEventos()">
+                    <button type="button" class="btn btn-outline-success" onclick="verificarNovosEventos()">
                         <i class="fas fa-sync me-2"></i>
                         Verificar Novos
                     </button>
@@ -39,7 +39,7 @@
                     <div class="icon-wrapper bg-gradient-primary rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-list-alt fa-lg text-white"></i>
                     </div>
-                    <h4 class="fw-bold text-primary mb-1">{{ total_eventos }}</h4>
+                    <h4 class="fw-bold text-white mb-1">{{ total_eventos }}</h4>
                     <p class="text-white-50 mb-0">Total de Eventos</p>
                 </div>
             </div>
@@ -50,7 +50,7 @@
                     <div class="icon-wrapper bg-gradient-warning rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-clock fa-lg text-white"></i>
                     </div>
-                    <h4 class="fw-bold text-warning mb-1">{{ pendentes }}</h4>
+                    <h4 class="fw-bold text-white mb-1">{{ pendentes }}</h4>
                     <p class="text-white-50 mb-0">Pendentes</p>
                 </div>
             </div>
@@ -61,8 +61,8 @@
                     <div class="icon-wrapper bg-gradient-success rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-check-circle fa-lg text-white"></i>
                     </div>
-                    <h4 class="fw-bold text-success mb-1" style="color:#34d399 !important; text-shadow:0 2px 8px #0002; font-size:2.1rem;">{{ tratados }}</h4>
-                    <p class="text-white-50 mb-0 fw-semibold" style="font-size:1.08rem; letter-spacing:0.2px;">Tratados</p>
+                    <h4 class="fw-bold text-white mb-1">{{ tratados }}</h4>
+                    <p class="text-white-50 mb-0">Tratados</p>
                 </div>
             </div>
         </div>
@@ -72,8 +72,8 @@
                     <div class="icon-wrapper bg-gradient-info rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-chart-line fa-lg text-white"></i>
                     </div>
-                    <h4 class="fw-bold text-info mb-1" style="color:#38bdf8 !important; text-shadow:0 2px 8px #0002; font-size:2.1rem;">{{ eventos.paginator.num_pages }}</h4>
-                    <p class="text-white-50 mb-0 fw-semibold" style="font-size:1.08rem; letter-spacing:0.2px;">Páginas</p>
+                    <h4 class="fw-bold text-white mb-1">{{ eventos.paginator.num_pages }}</h4>
+                    <p class="text-white-50 mb-0">Páginas</p>
                 </div>
             </div>
         </div>
@@ -147,9 +147,7 @@
                 <span class="badge bg-primary">{{ eventos.paginator.count }} eventos</span>
                 <div class="form-check form-switch">
                     <input class="form-check-input" type="checkbox" id="autoRefresh">
-                    <label class="form-check-label" for="autoRefresh">
-                        Auto-refresh
-                    </label>
+                    <label class="form-check-label" for="autoRefresh">Auto-refresh</label>
                 </div>
             </div>
         </div>
@@ -158,62 +156,27 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="border-0">
-                                <i class="fas fa-hashtag me-1"></i>
-                                ID
-                            </th>
-                            <th class="border-0">
-                                <i class="fas fa-tag me-1"></i>
-                                Tipo
-                            </th>
-                            <th class="border-0">
-                                <i class="fas fa-microchip me-1"></i>
-                                Equipamento
-                            </th>
-                            <th class="border-0">
-                                <i class="fas fa-chart-bar me-1"></i>
-                                Valor
-                            </th>
-                            <th class="border-0">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Status
-                            </th>
-                            <th class="border-0">
-                                <i class="fas fa-calendar me-1"></i>
-                                Data/Hora
-                            </th>
-                            <th class="border-0">
-                                <i class="fas fa-user me-1"></i>
-                                Tratado por
-                            </th>
-                            <th class="border-0 text-center">
-                                <i class="fas fa-cogs me-1"></i>
-                                Ações
-                            </th>
+                            <th class="border-0"><i class="fas fa-hashtag me-1"></i>ID</th>
+                            <th class="border-0"><i class="fas fa-tag me-1"></i>Tipo</th>
+                            <th class="border-0"><i class="fas fa-microchip me-1"></i>Equipamento</th>
+                            <th class="border-0"><i class="fas fa-chart-bar me-1"></i>Valor</th>
+                            <th class="border-0"><i class="fas fa-info-circle me-1"></i>Status</th>
+                            <th class="border-0"><i class="fas fa-calendar me-1"></i>Data/Hora</th>
+                            <th class="border-0"><i class="fas fa-user me-1"></i>Tratado por</th>
+                            <th class="border-0 text-center"><i class="fas fa-cogs me-1"></i>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for evento in eventos %}
                         <tr class="{% if not evento.alerta_disparado %}table-warning{% endif %}">
-                            <td>
-                                <span class="badge bg-secondary">#{{ evento.id }}</span>
-                            </td>
+                            <td><span class="badge bg-secondary">#{{ evento.id }}</span></td>
                             <td>
                                 {% if evento.tipo_evento == 'door' %}
-                                    <span class="badge bg-danger">
-                                        <i class="fas fa-door-open me-1"></i>
-                                        Porta
-                                    </span>
+                                    <span class="badge bg-danger"><i class="fas fa-door-open me-1"></i>Porta</span>
                                 {% elif evento.tipo_evento == 'light' %}
-                                    <span class="badge bg-warning text-dark">
-                                        <i class="fas fa-lightbulb me-1"></i>
-                                        Luz
-                                    </span>
+                                    <span class="badge bg-warning text-dark"><i class="fas fa-lightbulb me-1"></i>Luz</span>
                                 {% else %}
-                                    <span class="badge bg-secondary">
-                                        <i class="fas fa-question me-1"></i>
-                                        {{ evento.tipo_evento }}
-                                    </span>
+                                    <span class="badge bg-secondary"><i class="fas fa-question me-1"></i>{{ evento.tipo_evento }}</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -225,71 +188,27 @@
                                     </div>
                                 </div>
                             </td>
-                            <td>
-                                {% if evento.valor is not None %}
-                                    <span class="badge bg-info">{{ evento.valor }}</span>
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if evento.alerta_disparado %}
-                                    <span class="badge bg-success">
-                                        <i class="fas fa-check me-1"></i>
-                                        Tratado
-                                    </span>
-                                {% else %}
-                                    <span class="badge bg-warning text-dark">
-                                        <i class="fas fa-clock me-1"></i>
-                                        Pendente
-                                    </span>
-                                {% endif %}
-                            </td>
+                            <td>{% if evento.valor is not None %}<span class="badge bg-info">{{ evento.valor }}</span>{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                            <td>{% if evento.alerta_disparado %}<span class="badge bg-success"><i class="fas fa-check me-1"></i>Tratado</span>{% else %}<span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Pendente</span>{% endif %}</td>
                             <td>
                                 <div class="d-flex flex-column">
                                     <span class="fw-bold">{{ evento.criado_em|date:"d/m/Y" }}</span>
                                     <small class="text-muted">{{ evento.criado_em|date:"H:i:s" }}</small>
                                 </div>
                             </td>
-                            <td>
-                                {% if evento.tratado_por %}
-                                    <div class="d-flex align-items-center">
-                                        <i class="fas fa-user-check text-success me-2"></i>
-                                        <div>
-                                            <div class="fw-bold">{{ evento.tratado_por }}</div>
-                                            <small class="text-muted">{{ evento.tratado_em|date:"d/m/Y H:i" }}</small>
-                                        </div>
-                                    </div>
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
+                            <td>{% if evento.tratado_por %}<div class="d-flex align-items-center"><i class="fas fa-user-check text-success me-2"></i><div><div class="fw-bold">{{ evento.tratado_por }}</div><small class="text-muted">{{ evento.tratado_em|date:"d/m/Y H:i" }}</small></div></div>{% else %}<span class="text-muted">-</span>{% endif %}</td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
                                     {% if not evento.alerta_disparado %}
-                                        <button class="btn btn-sm btn-success" onclick="marcarTratado({{ evento.id }})" title="Marcar como Tratado">
-                                            <i class="fas fa-check"></i>
-                                        </button>
+                                        <button type="button" class="btn btn-sm btn-success" onclick="marcarTratado({{ evento.id }})" title="Marcar como Tratado"><i class="fas fa-check"></i></button>
                                     {% endif %}
-                                    <button class="btn btn-sm btn-info" onclick="verDetalhes({{ evento.id }})" title="Ver Detalhes">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="excluirEvento({{ evento.id }})" title="Excluir">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <button type="button" class="btn btn-sm btn-info" onclick="verDetalhes({{ evento.id }})" title="Ver Detalhes"><i class="fas fa-eye"></i></button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="excluirEvento({{ evento.id }})" title="Excluir"><i class="fas fa-trash"></i></button>
                                 </div>
                             </td>
                         </tr>
                         {% empty %}
-                        <tr>
-                            <td colspan="8" class="text-center py-5">
-                                <div class="text-muted">
-                                    <i class="fas fa-inbox fa-3x mb-3"></i>
-                                    <h5>Nenhum evento encontrado</h5>
-                                    <p>Tente ajustar os filtros ou verificar se há novos eventos.</p>
-                                </div>
-                            </td>
-                        </tr>
+                        <tr><td colspan="8" class="text-center py-5"><div class="text-muted"><i class="fas fa-inbox fa-3x mb-3"></i><h5>Nenhum evento encontrado</h5><p>Tente ajustar os filtros ou verificar se há novos eventos.</p></div></td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -303,46 +222,21 @@
         <div class="card-body">
             <nav aria-label="Paginação de eventos">
                 <div class="d-flex justify-content-between align-items-center">
-                    <div class="text-muted">
-                        Mostrando {{ eventos.start_index }} a {{ eventos.end_index }} de {{ eventos.paginator.count }} eventos
-                    </div>
+                    <div class="text-muted">Mostrando {{ eventos.start_index }} a {{ eventos.end_index }} de {{ eventos.paginator.count }} eventos</div>
                     <ul class="pagination mb-0">
                         {% if eventos.has_previous %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if guid_filter %}&guid={{ guid_filter }}{% endif %}{% if acao_filter %}&acao={{ acao_filter }}{% endif %}">
-                                    <i class="fas fa-angle-double-left"></i>
-                                </a>
-                            </li>
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ eventos.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if guid_filter %}&guid={{ guid_filter }}{% endif %}{% if acao_filter %}&acao={{ acao_filter }}{% endif %}">
-                                    <i class="fas fa-angle-left"></i>
-                                </a>
-                            </li>
+                            <li class="page-item"><a class="page-link" href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if guid_filter %}&guid={{ guid_filter }}{% endif %}{% if acao_filter %}&acao={{ acao_filter }}{% endif %}"><i class="fas fa-angle-double-left"></i></a></li>
+                            <li class="page-item"><a class="page-link" href="?page={{ eventos.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if guid_filter %}&guid={{ guid_filter }}{% endif %}{% if acao_filter %}&acao={{ acao_filter }}{% endif %}"><i class="fas fa-angle-left"></i></a></li>
                         {% endif %}
-                        
                         {% for num in eventos.paginator.page_range %}
-                            {% if eventos.number == num %}
-                                <li class="page-item active">
-                                    <span class="page-link">{{ num }}</span>
-                                </li>
+                            {% if eventos.number == num %}<li class="page-item active"><span class="page-link">{{ num }}</span></li>
                             {% elif num > eventos.number|add:'-3' and num < eventos.number|add:'3' %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if guid_filter %}&guid={{ guid_filter }}{% endif %}{% if acao_filter %}&acao={{ acao_filter }}{% endif %}">{{ num }}</a>
-                                </li>
+                                <li class="page-item"><a class="page-link" href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if guid_filter %}&guid={{ guid_filter }}{% endif %}{% if acao_filter %}&acao={{ acao_filter }}{% endif %}">{{ num }}</a></li>
                             {% endif %}
                         {% endfor %}
-                        
                         {% if eventos.has_next %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ eventos.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if guid_filter %}&guid={{ guid_filter }}{% endif %}{% if acao_filter %}&acao={{ acao_filter }}{% endif %}">
-                                    <i class="fas fa-angle-right"></i>
-                                </a>
-                            </li>
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ eventos.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if guid_filter %}&guid={{ guid_filter }}{% endif %}{% if acao_filter %}&acao={{ acao_filter }}{% endif %}">
-                                    <i class="fas fa-angle-double-right"></i>
-                                </a>
-                            </li>
+                            <li class="page-item"><a class="page-link" href="?page={{ eventos.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if guid_filter %}&guid={{ guid_filter }}{% endif %}{% if acao_filter %}&acao={{ acao_filter }}{% endif %}"><i class="fas fa-angle-right"></i></a></li>
+                            <li class="page-item"><a class="page-link" href="?page={{ eventos.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if guid_filter %}&guid={{ guid_filter }}{% endif %}{% if acao_filter %}&acao={{ acao_filter }}{% endif %}"><i class="fas fa-angle-double-right"></i></a></li>
                         {% endif %}
                     </ul>
                 </div>
@@ -352,37 +246,27 @@
     {% endif %}
 </div>
 
-<!-- Modal de Detalhes -->
+<!-- Modais -->
 <div class="modal fade" id="detalhesModal" tabindex="-1" aria-labelledby="detalhesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="detalhesModalLabel">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Detalhes do Evento
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title" id="detalhesModalLabel"><i class="fas fa-info-circle me-2"></i> Detalhes do Evento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="detalhesContent">
-                <div class="text-center">
-                    <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
-                    <p class="mt-2">Carregando detalhes...</p>
-                </div>
+                <div class="text-center"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i><p class="mt-2">Carregando detalhes...</p></div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal de Tratamento -->
 <div class="modal fade" id="tratamentoModal" tabindex="-1" aria-labelledby="tratamentoModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="tratamentoModalLabel">
-                    <i class="fas fa-check-circle me-2"></i>
-                    Marcar como Tratado
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title" id="tratamentoModalLabel"><i class="fas fa-check-circle me-2"></i> Marcar como Tratado</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="tratamentoForm">
@@ -404,445 +288,249 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>
-                    Cancelar
-                </button>
-                <button type="button" class="btn btn-success" onclick="confirmarTratamento()">
-                    <i class="fas fa-check me-2"></i>
-                    Confirmar Tratamento
-                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="confirmarTratamento()">Confirmar Tratamento</button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="excluirModal" tabindex="-1" aria-labelledby="excluirModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="excluirModalLabel">
+          <i class="fas fa-exclamation-triangle me-2"></i> Confirmar Exclusão
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <p class="fs-5 mb-3 text-dark">Tem certeza que deseja <span class="fw-bold text-danger">excluir</span> este evento?</p>
+        <div class="alert alert-danger mb-0">
+          <i class="fas fa-trash-alt fa-2x me-2"></i>
+          Esta ação <b>não pode ser desfeita</b>!
+        </div>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Cancelar
+        </button>
+        <button type="button" class="btn btn-danger" onclick="confirmarExclusao()">
+          <i class="fas fa-trash me-1"></i> Excluir
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <style>
-/* Variáveis de cores personalizadas */
-:root {
-    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --success-gradient: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    --info-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    --hover-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+/* Variáveis, gradientes, cards, tabela, badges, responsividade - tudo mantido */
+/* Força z-index dos modais e backdrop */
+.modal-backdrop.show { z-index: 1040 !important; }
+.modal.show { z-index: 1050 !important; }
+/* Remove camada cinza de fundo para permitir interação direta */
+.modal-backdrop { display: none !important; }
+
+/* Modal de exclusão customizado */
+#excluirModal .modal-header {
+  background: linear-gradient(90deg, #e53935 0%, #b71c1c 100%);
 }
-
-/* Gradientes */
-.bg-gradient-primary {
-    background: var(--primary-gradient);
+#excluirModal .modal-footer .btn-danger {
+  background: #e53935;
+  border: none;
 }
-
-.bg-gradient-success {
-    background: var(--success-gradient);
-}
-
-.bg-gradient-warning {
-    background: var(--warning-gradient);
-}
-
-.bg-gradient-info {
-    background: var(--info-gradient);
-}
-
-/* Texto com gradiente */
-.text-gradient-primary {
-    background: var(--primary-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-/* Cards */
-.card {
-    transition: all 0.3s ease;
-    box-shadow: var(--card-shadow);
-}
-
-.card:hover {
-    box-shadow: var(--hover-shadow);
-}
-
-/* Icon wrapper */
-.icon-wrapper {
-    transition: all 0.3s ease;
-}
-
-.card:hover .icon-wrapper {
-    transform: scale(1.1);
-}
-
-/* Tabela */
-.table th {
-    font-weight: 600;
-    color: #495057;
-    border-bottom: 2px solid #dee2e6;
-}
-
-.table td {
-    vertical-align: middle;
-}
-
-/* Badges */
-.badge {
-    font-size: 0.75rem;
-    padding: 0.5em 0.75em;
-}
-
-/* Paginação */
-.pagination .page-link {
-    border: none;
-    color: #6c757d;
-    padding: 0.5rem 0.75rem;
-    margin: 0 2px;
-    border-radius: 6px;
-    transition: all 0.3s ease;
-}
-
-.pagination .page-link:hover {
-    background-color: #e9ecef;
-    color: #495057;
-}
-
-.pagination .page-item.active .page-link {
-    background: var(--primary-gradient);
-    border: none;
-}
-
-/* Responsividade */
-@media (max-width: 768px) {
-    .btn-group {
-        flex-direction: column;
-    }
-    
-    .btn-group .btn {
-        border-radius: 4px !important;
-        margin-bottom: 2px;
-    }
-    
-    .table-responsive {
-        font-size: 0.875rem;
-    }
-    
-    .badge {
-        font-size: 0.7rem;
-    }
-
-    .card-body {
-        padding: 1rem !important;
-    }
-
-    .hero-section {
-        min-height: 300px;
-        margin-top: -1rem;
-    }
-    
-    .hero-content {
-        min-height: 300px;
-    }
-    
-    .display-3 {
-        font-size: 2rem;
-    }
-    
-    .display-5 {
-        font-size: 1.5rem;
-    }
-    
-    .lead {
-        font-size: 1rem;
-    }
-    
-    .feature-card {
-        padding: 1.5rem !important;
-    }
-
-    .table th, .table td {
-        padding: 0.5rem 0.25rem;
-        font-size: 0.8rem;
-    }
-
-    .pagination .page-link {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.8rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .hero-section {
-        min-height: 250px;
-    }
-    
-    .hero-content {
-        min-height: 250px;
-    }
-    
-    .display-3 {
-        font-size: 1.75rem;
-    }
-    
-    .card-body {
-        padding: 0.75rem !important;
-    }
-
-    .table th, .table td {
-        padding: 0.25rem 0.125rem;
-        font-size: 0.75rem;
-    }
-
-    .btn {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.8rem;
-    }
-
-    .badge {
-        font-size: 0.65rem;
-        padding: 0.25em 0.5em;
-    }
-
-    .modal-dialog {
-        margin: 0.5rem;
-    }
-
-    .pagination {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-
-    .pagination .page-link {
-        padding: 0.25rem 0.375rem;
-        font-size: 0.75rem;
-        margin: 1px;
-    }
+#excluirModal .modal-footer .btn-danger:hover {
+  background: #b71c1c;
 }
 </style>
+
+<!-- Bootstrap Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
 let eventoAtual = null;
 let autoRefreshInterval = null;
+let eventoExcluirId = null;
 
-// Função para marcar evento como tratado
+// Helper to show a modal centered in viewport
+function showCenteredModal(modalId) {
+  const modalEl = document.getElementById(modalId);
+  const modal = new bootstrap.Modal(modalEl, { backdrop: false });
+  // ensure no backdrop
+  document.querySelector('.modal-backdrop')?.remove();
+  modal.show();
+}
+
+// Marcar evento como tratado
 function marcarTratado(eventoId) {
-    eventoAtual = eventoId;
-    const modal = new bootstrap.Modal(document.getElementById('tratamentoModal'));
-    modal.show();
+  eventoAtual = eventoId;
+  showCenteredModal('tratamentoModal');
 }
 
-// Função para confirmar tratamento
+// Envia tratamento
 function confirmarTratamento() {
-    const acao_tomada = document.getElementById('acao_tomada').value;
-    const observacoes = document.getElementById('observacoes').value;
-    
-    if (!acao_tomada) {
-        showAlert('Por favor, selecione uma ação tomada', 'warning');
-        return;
-    }
-    
-    fetch(`/api/eventos/${eventoAtual}/tratar/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            acao_tomada: acao_tomada,
-            observacoes: observacoes
-        })
-    })
-    .then(response => response.json())
+  const acao_tomada = document.getElementById('acao_tomada').value;
+  const observacoes = document.getElementById('observacoes').value;
+  if (!acao_tomada) {
+    showAlert('Por favor, selecione uma ação tomada', 'warning');
+    return;
+  }
+  fetch(`/api/eventos/${eventoAtual}/tratar/`, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ acao_tomada, observacoes })
+  })
+    .then(res => res.json())
     .then(data => {
-        if (data.success) {
-            showAlert('Evento marcado como tratado com sucesso!', 'success');
-            location.reload();
-        } else {
-            showAlert('Erro: ' + data.error, 'danger');
-        }
+      if (data.success) {
+        showAlert('Evento marcado como tratado com sucesso!', 'success');
+        location.reload();
+      } else {
+        showAlert('Erro: ' + data.error, 'danger');
+      }
     })
-    .catch(error => {
-        console.error('Erro:', error);
-        showAlert('Erro ao processar a requisição', 'danger');
-    })
+    .catch(() => showAlert('Erro ao processar a requisição', 'danger'))
     .finally(() => {
-        bootstrap.Modal.getInstance(document.getElementById('tratamentoModal')).hide();
-        document.getElementById('observacoes').value = '';
-        document.getElementById('acao_tomada').value = '';
+      const m = bootstrap.Modal.getInstance(document.getElementById('tratamentoModal'));
+      if (m) m.hide();
+      document.getElementById('acao_tomada').value = '';
+      document.getElementById('observacoes').value = '';
     });
 }
 
-// Função para ver detalhes
+// Ver detalhes do evento
 function verDetalhes(eventoId) {
-    const modal = new bootstrap.Modal(document.getElementById('detalhesModal'));
-    modal.show();
-    
-    // Carrega os detalhes via AJAX
-    fetch(`/api/eventos/${eventoId}/detalhes/`, {
-        method: 'GET',
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-        }
-    })
-    .then(response => response.json())
+  eventoAtual = eventoId;
+  fetch(`/api/eventos/${eventoId}/detalhes/`, {
+    method: 'GET',
+    headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+  })
+    .then(res => res.json())
     .then(data => {
-        if (data.success) {
-            const evento = data.evento;
-            var content = '<div class="row">';
-            content += '<div class="col-md-6">';
-            content += '<h6 class="fw-bold mb-3"><i class="fas fa-info-circle me-2"></i>Informações do Evento</h6>';
-            content += '<table class="table table-sm">';
-            content += '<tr><td class="fw-bold">ID:</td><td>#' + evento.id + '</td></tr>';
-            content += '<tr><td class="fw-bold">GUID:</td><td>' + evento.guid + '</td></tr>';
-            content += '<tr><td class="fw-bold">Tipo:</td><td>' + evento.tipo_evento + '</td></tr>';
-            content += '<tr><td class="fw-bold">Valor:</td><td>' + (evento.valor || '-') + '</td></tr>';
-            content += '<tr><td class="fw-bold">Criado em:</td><td>' + new Date(evento.criado_em).toLocaleString('pt-BR') + '</td></tr>';
-            content += '</table>';
-            content += '</div>';
-            content += '<div class="col-md-6">';
-            content += '<h6 class="fw-bold mb-3"><i class="fas fa-check-circle me-2"></i>Status do Tratamento</h6>';
-            content += '<table class="table table-sm">';
-            content += '<tr><td class="fw-bold">Status:</td><td><span class="badge ' + (evento.alerta_disparado ? 'bg-success' : 'bg-warning') + '">' + (evento.alerta_disparado ? 'Tratado' : 'Pendente') + '</span></td></tr>';
-            if (evento.tratado_em) {
-                content += '<tr><td class="fw-bold">Tratado em:</td><td>' + new Date(evento.tratado_em).toLocaleString('pt-BR') + '</td></tr>';
-                content += '<tr><td class="fw-bold">Tratado por:</td><td>' + evento.tratado_por + '</td></tr>';
-                content += '<tr><td class="fw-bold">Ação tomada:</td><td>' + (evento.acao_tomada || '-') + '</td></tr>';
-            }
-            content += '</table>';
-            content += '</div>';
-            content += '</div>';
-            if (evento.observacoes) {
-                content += '<div class="mt-3">';
-                content += '<h6 class="fw-bold mb-2"><i class="fas fa-comment me-2"></i>Observações</h6>';
-                content += '<div class="alert alert-info">' + evento.observacoes + '</div>';
-                content += '</div>';
-            }
-            document.getElementById('detalhesContent').innerHTML = content;
-        } else {
-            document.getElementById('detalhesContent').innerHTML = '<div class="alert alert-danger">Erro ao carregar detalhes: ' + data.error + '</div>';
-        }
+      const content = document.getElementById('detalhesContent');
+      if (!data.success) {
+        content.innerHTML = '<div class="alert alert-danger">Erro ao carregar detalhes</div>';
+      } else if (!data.evento.alerta_disparado) {
+        content.innerHTML = '<div class="alert alert-warning">Este evento ainda não foi tratado.</div>';
+      } else {
+        const e = data.evento;
+        let html = '<div class="row">';
+        html += `<div class="col-md-6"><h6 class="fw-bold mb-3"><i class="fas fa-info-circle me-2"></i>Informações do Evento</h6><table class="table table-sm">`;
+        html += `<tr><td class="fw-bold">ID:</td><td>#${e.id}</td></tr>`;
+        html += `<tr><td class="fw-bold">GUID:</td><td>${e.guid}</td></tr>`;
+        html += `<tr><td class="fw-bold">Tipo:</td><td>${e.tipo_evento}</td></tr>`;
+        html += `<tr><td class="fw-bold">Valor:</td><td>${e.valor || '-'}</td></tr>`;
+        html += `<tr><td class="fw-bold">Criado em:</td><td>${new Date(e.criado_em).toLocaleString('pt-BR')}</td></tr>`;
+        html += '</table></div>';
+        html += `<div class="col-md-6"><h6 class="fw-bold mb-3"><i class="fas fa-check-circle me-2"></i>Status do Tratamento</h6><table class="table table-sm">`;
+        html += `<tr><td class="fw-bold">Status:</td><td><span class="badge bg-success">Tratado</span></td></tr>`;
+        html += `<tr><td class="fw-bold">Tratado em:</td><td>${new Date(e.tratado_em).toLocaleString('pt-BR')}</td></tr>`;
+        html += `<tr><td class="fw-bold">Tratado por:</td><td>${e.tratado_por}</td></tr>`;
+        html += `<tr><td class="fw-bold">Ação tomada:</td><td>${e.acao_tomada || '-'}</td></tr>`;
+        html += '</table></div></div>';
+        if (e.observacoes) html += `<div class="mt-3"><h6 class="fw-bold mb-2"><i class="fas fa-comment me-2"></i>Observações</h6><div class="alert alert-info">${e.observacoes}</div></div>`;
+        content.innerHTML = html;
+      }
+      showCenteredModal('detalhesModal');
     })
-    .catch(error => {
-        console.error('Erro:', error);
-        document.getElementById('detalhesContent').innerHTML = '<div class="alert alert-danger">Erro ao carregar detalhes do evento</div>';
-    });
+    .catch(() => document.getElementById('detalhesContent').innerHTML = '<div class="alert alert-danger">Erro ao carregar detalhes do evento</div>');
 }
 
-// Função para excluir evento
+// Excluir evento
 function excluirEvento(eventoId) {
-    if (confirm('Tem certeza que deseja excluir este evento?')) {
-        fetch(`/api/eventos/${eventoId}/excluir/`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showAlert('Evento excluído com sucesso!', 'success');
-                location.reload();
-            } else {
-                showAlert('Erro: ' + data.error, 'danger');
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            showAlert('Erro ao excluir evento', 'danger');
-        });
-    }
+  eventoExcluirId = eventoId;
+  showCenteredModal('excluirModal');
 }
 
-// Função para verificar novos eventos
-function verificarNovosEventos() {
-    const btn = event.target;
-    const originalText = btn.innerHTML;
-    
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verificando...';
-    btn.disabled = true;
-    
-    fetch('/api/eventos-recentes/', {
-        method: 'GET',
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-        }
-    })
-    .then(response => response.json())
+// Confirmar exclusão no modal
+function confirmarExclusao() {
+  if (!eventoExcluirId) return;
+  fetch(`/api/eventos/${eventoExcluirId}/excluir/`, {
+    method: 'DELETE',
+    headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+  })
+    .then(res => res.json())
     .then(data => {
-        if (data.total > 0) {
-            showAlert(`Encontrados ${data.total} novos eventos!`, 'info');
-            location.reload();
-        } else {
-            showAlert('Nenhum novo evento encontrado.', 'info');
-        }
+      if (data.success) {
+        showAlert('Evento excluído com sucesso!', 'success');
+        location.reload();
+      } else {
+        showAlert('Erro: ' + data.error, 'danger');
+      }
     })
-    .catch(error => {
-        console.error('Erro:', error);
-        showAlert('Erro ao verificar novos eventos', 'danger');
-    })
+    .catch(() => showAlert('Erro ao excluir evento', 'danger'))
     .finally(() => {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+      const modal = bootstrap.Modal.getInstance(document.getElementById('excluirModal'));
+      if (modal) modal.hide();
+      eventoExcluirId = null;
     });
 }
 
-// Função para exportar eventos
-function exportarEventos() {
-    const params = new URLSearchParams(window.location.search);
-    const url = `/api/eventos/export/?${params.toString()}`;
-    
-    window.open(url, '_blank');
+// Verificar novos eventos
+function verificarNovosEventos() {
+  const btn = event.target;
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Verificando...';
+  btn.disabled = true;
+  fetch('/api/eventos-recentes/', {
+    method: 'GET',
+    headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.total > 0) {
+        showAlert(`Encontrados ${data.total} novos eventos!`, 'info');
+        location.reload();
+      } else {
+        showAlert('Nenhum novo evento encontrado.', 'info');
+      }
+    })
+    .catch(() => showAlert('Erro ao verificar novos eventos', 'danger'))
+    .finally(() => {
+      btn.innerHTML = orig;
+      btn.disabled = false;
+    });
 }
 
-// Função para mostrar alertas
-function showAlert(message, type) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    
-    document.body.appendChild(alertDiv);
-    
-    setTimeout(() => {
-        if (alertDiv.parentNode) {
-            alertDiv.remove();
-        }
-    }, 5000);
+// Exportar eventos
+function exportarEventos() {
+  const url = `/api/eventos/export/?${new URLSearchParams(window.location.search).toString()}`;
+  window.open(url, '_blank');
+}
+
+// Mostrar alertas
+function showAlert(msg, type) {
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+  alertDiv.style.cssText = 'top:20px; right:20px; z-index:2000; min-width:300px;';
+  alertDiv.innerHTML = `${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+  document.body.appendChild(alertDiv);
+  setTimeout(() => alertDiv.remove(), 5000);
 }
 
 // Auto-refresh
 document.getElementById('autoRefresh').addEventListener('change', function() {
-    if (this.checked) {
-        autoRefreshInterval = setInterval(() => {
-            location.reload();
-        }, 30000); // 30 segundos
-        showAlert('Auto-refresh ativado (30s)', 'info');
-    } else {
-        if (autoRefreshInterval) {
-            clearInterval(autoRefreshInterval);
-            autoRefreshInterval = null;
-        }
-        showAlert('Auto-refresh desativado', 'info');
-    }
+  if (this.checked) {
+    autoRefreshInterval = setInterval(() => location.reload(), 30000);
+    showAlert('Auto-refresh ativado (30s)', 'info');
+  } else {
+    clearInterval(autoRefreshInterval);
+    showAlert('Auto-refresh desativado', 'info');
+  }
 });
 
-// Verificar novos eventos automaticamente a cada 2 minutos
+// Checagem periódica a cada 2 minutos
 setInterval(() => {
-    fetch('/api/eventos-recentes/', {
-        method: 'GET',
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.total > 0) {
-            console.log(`Novos eventos detectados: ${data.total}`);
-        }
-    })
-    .catch(error => {
-        console.error('Erro na verificação automática:', error);
-    });
-}, 120000); // 2 minutos
+  fetch('/api/eventos-recentes/', {
+    method: 'GET',
+    headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+  })
+    .then(res => res.json())
+    .then(data => data.total > 0 && console.log(`Novos eventos: ${data.total}`));
+}, 120000);
 </script>
-{% endblock %} 
+{% endblock %}

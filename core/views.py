@@ -1,6 +1,6 @@
 from django.shortcuts import render
 import requests  # Importação correta da biblioteca
-from .models import altocafezalmodel
+from .models import altocafezalmodel, EventoTratado
 from .forms import AltocafezalModelForm
 # Create your views here.
 from django.contrib.auth.views import LoginView, LogoutView
@@ -10,6 +10,13 @@ from django.urls import reverse_lazy
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods, require_GET
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.utils.timezone import now
 
 # Página inicial (apenas para usuários autenticados)
 class HomeView(LoginRequiredMixin, TemplateView):
@@ -844,7 +851,7 @@ def eventos_list_view(request):
     eventos = eventos.order_by('-criado_em')
     
     # Paginação
-    paginator = Paginator(eventos, 20)  # 20 eventos por página
+    paginator = Paginator(eventos, 10)  # 20 eventos por página
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
