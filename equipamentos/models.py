@@ -88,6 +88,18 @@ class Equipamento(models.Model):
         blank=True,
         verbose_name="Destino"
     )
+    lacre_inn = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        verbose_name="Lacre INN"
+    )
+    lacre = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        verbose_name="Lacre"
+    )
     status_operacao = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,

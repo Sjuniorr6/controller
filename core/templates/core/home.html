@@ -12,7 +12,9 @@
 
 <!-- Cards de Navegação -->
 <div class="container">
+
     <div class="row justify-content-center g-4">
+        {% if perms.core.can_access_mapa %}
         <!-- Card do Mapa -->
         <div class="col-12 col-sm-6 col-lg-4 d-flex justify-content-center">
             <div class="card h-100 border-0 shadow-lg hover-card map-card card-home-mini">
@@ -24,13 +26,15 @@
                     <p class="card-text text-white-50 mb-4" style="font-size:0.95rem;">
                         Acesse a localização dos navios e equipamentos em tempo real.
                     </p>
-                    <a href="{% url 'mapa' %}" class="btn btn-gradient-primary btn-lg w-100">
+                    <a href="{% url 'core:mapa' %}" class="btn btn-gradient-primary btn-lg w-100">
                         <i class="fas fa-map me-2"></i>
                         Ver Mapa
                     </a>
                 </div>
             </div>
         </div>
+        {% endif %}
+        {% if perms.scanner.can_access_scanner %}
         <!-- Card do Scanner -->
         <div class="col-12 col-sm-6 col-lg-4 d-flex justify-content-center">
             <div class="card h-100 border-0 shadow-lg hover-card scanner-card card-home-mini">
@@ -49,6 +53,8 @@
                 </div>
             </div>
         </div>
+        {% endif %}
+        {% if perms.core.can_access_eventos %}
         <!-- Card de Eventos -->
         <div class="col-12 col-sm-6 col-lg-4 d-flex justify-content-center">
             <div class="card h-100 border-0 shadow-lg hover-card eventos-card card-home-mini">
@@ -60,7 +66,7 @@
                     <p class="card-text text-white-50 mb-4" style="font-size:0.95rem;">
                         Visualize todos os eventos e alertas registrados.
                     </p>
-                    <a href="{% url 'eventos' %}" class="btn btn-gradient-warning btn-lg w-100">
+                    <a href="{% url 'core:eventos' %}" class="btn btn-gradient-warning btn-lg w-100">
                         <i class="fas fa-history me-2"></i>
                         Ver Eventos
                     </a>
@@ -68,7 +74,7 @@
             </div>
         </div>
     </div>
-
+    {% endif %}
     <!-- Seção de Recursos -->
     <div class="row mt-5 pt-5">
         <div class="col-12">
@@ -165,7 +171,7 @@
     color: #6ee7b7 !important;
 }
 .card-home-mini.eventos-card .card-title {
-    color: #fde68a !important;
+                    color: #f59e0b !important;
 }
 .card-home-mini .card-text {
     color: rgba(255,255,255,0.88) !important;

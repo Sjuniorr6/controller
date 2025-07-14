@@ -8,7 +8,6 @@ from typing import List, Dict, Any
 from datetime import timedelta
 
 from celery import shared_task
-from django.core.cache import cache  # usado só p/ reduzir logs
 from django.db.models import Max
 from django.utils.timezone import now
 
@@ -28,7 +27,6 @@ CONFIG_FILE = os.path.join(
 )
 TIMEOUT_S   = 30                     # timeout HTTP da API
 LUX_LIMITE  = 15.0                   # acima disso é "luz alta"
-ALERTA_COOLDOWN = 30                 # minutos de cooldown entre alertas do mesmo tipo
 # ---------------------------------------------------------------------------
 
 
@@ -44,7 +42,7 @@ def _carregar_guids() -> List[str]:
         if not guids:
             logger.warning("⚠️ Nenhum GUID encontrado em %s", CONFIG_FILE)
         return guids
-    except Exception as exc:                         # noqa: BLE001
+    except Exception as exc:
         logger.error("❌ Erro lendo %s: %s", CONFIG_FILE, exc)
         return []
 
@@ -66,7 +64,7 @@ def consultar_assetcontrol_equipamentos() -> List[Dict[str, Any]]:
         resp = requests.post(ASSETCONTROL_URL, json=payload, timeout=TIMEOUT_S)
         resp.raise_for_status()
         data = resp.json()
-    except Exception as exc:                         # noqa: BLE001
+    except Exception as exc:
         logger.error("❌ Erro consumindo AssetControl: %s", exc)
         return []
 
@@ -75,69 +73,37 @@ def consultar_assetcontrol_equipamentos() -> List[Dict[str, Any]]:
         return []
 
     resultados: List[Dict[str, Any]] = []
-
     for obj in data["FObject"]:
         guid = obj.get("FAssetID")
         nome = obj.get("FVehicleName") or "Desconhecido"
         porta = int(obj.get("FDoor", -1))
 
-        # luz vem dentro de FExpandProto.FDesc (string JSON)
         raw_desc = obj.get("FExpandProto", {}).get("FDesc", "")
         try:
             desc = json.loads(raw_desc) if raw_desc else {}
             luz = float(desc.get("fLx", -1))
-        except Exception:                            # noqa: BLE001
+        except Exception:
             luz = -1
 
-        resultados.append(
-            {"id": guid, "nome": nome, "FDoor": porta, "fLx": luz},
-        )
+        resultados.append({
+            "id": guid,
+            "nome": nome,
+            "FDoor": porta,
+            "fLx": luz,
+        })
 
     return resultados
 
 
-def _pode_disparar_alerta(guid: str, tipo_evento: str, valor_atual: float) -> bool:
-    """
-    Verifica se pode disparar alerta baseado no cooldown de 30 minutos.
-    Retorna True se pode alertar, False se está em cooldown.
-    """
-    # Busca o último evento do mesmo tipo para este equipamento
-    ultimo_evento = (
-        EventoTratado.objects
-        .filter(guid=guid, tipo_evento=tipo_evento)
-        .order_by('-criado_em')
-        .first()
-    )
-    
-    if not ultimo_evento:
-        # Primeiro evento deste tipo para este equipamento
-        return True
-    
-    # Verifica se passou o tempo de cooldown (30 minutos)
-    tempo_limite = now() - timedelta(minutes=ALERTA_COOLDOWN)
-    
-    if ultimo_evento.criado_em > tempo_limite:
-        logger.debug(
-            "⏰ Cooldown ativo para %s (%s) - último alerta há %s",
-            guid,
-            tipo_evento,
-            now() - ultimo_evento.criado_em
-        )
-        return False
-    
-    return True
-
-
 # ---------------------------------------------------------------------------
-#  TASK CELERY
+#  TASK CELERY SEM COOLDOWN E COM DEBUG
 # ---------------------------------------------------------------------------
 @shared_task
 def verificar_alertas_equipamentos() -> None:
     """
     * Consulta a API.
     * Compara com o último valor salvo no BD.
-    * Grava somente mudanças em EventoTratado (bulk_create).
-    * Aplica cooldown de 30 minutos entre alertas do mesmo tipo.
+    * Dispara alerta imediato a cada mudança e salva no BD.
     """
     logger.warning("🔁 Verificando AssetControl…")
 
@@ -145,99 +111,78 @@ def verificar_alertas_equipamentos() -> None:
     if not resultados:
         return
 
-    # ------------------------------------------------------------------
-    # 1) Recupera em **uma** query o último registro de cada par
-    #    (guid, tipo_evento).  Isso fica na memória em estado_cache.
-    # ------------------------------------------------------------------
+    # 1) carrega último estado do BD
     sub = (
         EventoTratado.objects
         .values("guid", "tipo_evento")
         .annotate(ultimo_id=Max("id"))
     )
-    ultimos = (
-        EventoTratado.objects
-        .filter(id__in=[u["ultimo_id"] for u in sub])
-        .values("guid", "tipo_evento", "valor")
-    )
+    ultimos = EventoTratado.objects.filter(
+        id__in=[u["ultimo_id"] for u in sub]
+    ).values("guid", "tipo_evento", "valor")
 
-    estado_cache: dict[tuple[str, str], float] = {
+    estado_cache = {
         (u["guid"], u["tipo_evento"]): u["valor"]
         for u in ultimos
     }
 
     novos_eventos: list[EventoTratado] = []
 
-    # ------------------------------------------------------------------
-    # 2) Percorre a leitura atual comparando com o último valor salvo.
-    # ------------------------------------------------------------------
+    # 2) percorre resultados e alerta sempre que houver mudança
     for r in resultados:
-        guid = r["id"]
-        nome = r["nome"]
+        guid, nome = r["id"], r["nome"]
 
-        # -------- Porta ------------------------------------------------
-        if r["FDoor"] in (0, 1):  # -1 = sem dado
+        # Porta
+        if r["FDoor"] in (0, 1):
             key = (guid, "door")
-            if estado_cache.get(key) != r["FDoor"]:
-                # Verifica se pode disparar alerta (cooldown)
-                if _pode_disparar_alerta(guid, "door", r["FDoor"]):
-                    logger.warning(
-                        "🚪 Porta %s – %s (%s)",
-                        "aberta" if r["FDoor"] else "fechada",
-                        nome,
-                        guid,
+            antigo = estado_cache.get(key)
+            novo = r["FDoor"]
+            logger.debug("DEBUG %s → FDoor=%s (antes=%s)", guid, novo, antigo)
+            if antigo != novo:
+                estado_cache[key] = novo
+                logger.warning(
+                    "🚪 Porta %s – %s (%s)",
+                    "aberta" if novo else "fechada",
+                    nome,
+                    guid,
+                )
+                novos_eventos.append(
+                    EventoTratado(
+                        guid=guid,
+                        tipo_evento="door",
+                        valor=novo,
+                        criado_em=now(),
                     )
-                    estado_cache[key] = r["FDoor"]
-                    novos_eventos.append(
-                        EventoTratado(
-                            guid=guid,
-                            tipo_evento="door",
-                            valor=r["FDoor"],
-                            criado_em=now(),
-                            alerta_disparado=True,  # Marca como disparado
-                        ),
-                    )
-                else:
-                    logger.debug(
-                        "⏰ Cooldown: porta %s – %s (%s) - não alertando",
-                        "aberta" if r["FDoor"] else "fechada",
-                        nome,
-                        guid,
-                    )
+                )
 
-        # -------- Luz --------------------------------------------------
-        if r["fLx"] >= 0:  # -1 = sem dado
+        # Luz
+        if r["fLx"] >= 0:
             key = (guid, "light")
-            if estado_cache.get(key) != r["fLx"]:
-                # Verifica se pode disparar alerta (cooldown)
-                if _pode_disparar_alerta(guid, "light", r["fLx"]):
-                    if r["fLx"] > LUX_LIMITE:
-                        logger.warning(
-                            "💡 Luz alta (%.1f) em %s (%s)",
-                            r["fLx"],
-                            nome,
-                            guid,
-                        )
-                    estado_cache[key] = r["fLx"]
-                    novos_eventos.append(
-                        EventoTratado(
-                            guid=guid,
-                            tipo_evento="light",
-                            valor=r["fLx"],
-                            criado_em=now(),
-                            alerta_disparado=True,  # Marca como disparado
-                        ),
+            antigo = estado_cache.get(key)
+            novo = r["fLx"]
+            logger.debug("DEBUG %s → fLx=%.1f (antes=%s)", guid, novo, antigo)
+            if antigo != novo:
+                estado_cache[key] = novo
+                if novo > LUX_LIMITE:
+                    logger.warning(
+                        "💡 Luz alta (%.1f) em %s (%s)",
+                        novo, nome, guid
                     )
                 else:
-                    logger.debug(
-                        "⏰ Cooldown: luz %.1f em %s (%s) - não alertando",
-                        r["fLx"],
-                        nome,
-                        guid,
+                    logger.warning(
+                        "💡 Luz mudou para %.1f em %s (%s)",
+                        novo, nome, guid
                     )
+                novos_eventos.append(
+                    EventoTratado(
+                        guid=guid,
+                        tipo_evento="light",
+                        valor=novo,
+                        criado_em=now(),
+                    )
+                )
 
-    # ------------------------------------------------------------------
-    # 3) Salva em lote e evita flood no log
-    # ------------------------------------------------------------------
+    # 3) salva novos eventos em lote
     if novos_eventos:
         EventoTratado.objects.bulk_create(novos_eventos, batch_size=500)
         logger.info("💾 %d novos eventos gravados", len(novos_eventos))

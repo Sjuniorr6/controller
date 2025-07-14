@@ -8,9 +8,11 @@ from .views import (
     AltocafezalCreateView, equipamento_list_view, burbomcofeCreateView,
     equipamento_listburbom_view, equipamento_listnkg_view, equipamento_listvelosocofe_view,
     update_assetscontrols_data, update_t42_data, verificar_fdoor,eventos_recentes,alertas_api,
-    eventos_list_view, tratar_evento, excluir_evento, detalhes_evento, exportar_eventos
+    eventos_list_view, tratar_evento, excluir_evento, detalhes_evento, exportar_eventos,
+    gerar_historico_pdf
 )
 
+app_name = 'core'
 
 urlpatterns = [
     path("", HomeView.as_view(), name="home"),
@@ -59,4 +61,5 @@ urlpatterns = [
      path("api/eventos/<int:evento_id>/excluir/", excluir_evento, name="excluir_evento"),
      path("api/eventos/<int:evento_id>/detalhes/", detalhes_evento, name="detalhes_evento"),
      path("api/eventos/export/", exportar_eventos, name="exportar_eventos"),
+     path("api/gerar-historico-pdf/", gerar_historico_pdf, name="gerar_historico_pdf"),
 ]

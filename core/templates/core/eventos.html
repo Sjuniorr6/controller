@@ -95,6 +95,7 @@
                         <option value="">Todos os Status</option>
                         <option value="pendente" {% if status_filter == 'pendente' %}selected{% endif %}>Pendente</option>
                         <option value="tratado" {% if status_filter == 'tratado' %}selected{% endif %}>Tratado</option>
+                        <option value="ignorado" {% if status_filter == 'ignorado' %}selected{% endif %}>Ignorado</option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -107,7 +108,7 @@
                 </div>
                 <div class="col-md-3">
                     <label for="guid" class="form-label fw-bold">Equipamento (GUID)</label>
-                    <input type="text" name="guid" id="guid" class="form-control" value="{{ guid_filter }}" placeholder="Digite o GUID...">
+                    <input type="text" name="guid" id="guid" class="form-control" value="{{ guid_filter }}" placeholder="Digite o GUID ou parte dele...">
                 </div>
                 <div class="col-md-3">
                     <label for="acao" class="form-label fw-bold">Ação Tomada</label>
@@ -126,7 +127,7 @@
                             <i class="fas fa-search me-2"></i>
                             Filtrar
                         </button>
-                        <a href="{% url 'eventos' %}" class="btn btn-outline-secondary">
+                        <a href="{% url 'core:eventos' %}" class="btn btn-outline-secondary">
                             <i class="fas fa-times me-2"></i>
                             Limpar
                         </a>
@@ -168,7 +169,7 @@
                     </thead>
                     <tbody>
                         {% for evento in eventos %}
-                        <tr class="{% if not evento.alerta_disparado %}table-warning{% endif %}">
+                        <tr class="{% if evento.status == 'pendente' %}table-warning{% endif %}">
                             <td><span class="badge bg-secondary">#{{ evento.id }}</span></td>
                             <td>
                                 {% if evento.tipo_evento == 'door' %}
@@ -189,7 +190,15 @@
                                 </div>
                             </td>
                             <td>{% if evento.valor is not None %}<span class="badge bg-info">{{ evento.valor }}</span>{% else %}<span class="text-muted">-</span>{% endif %}</td>
-                            <td>{% if evento.alerta_disparado %}<span class="badge bg-success"><i class="fas fa-check me-1"></i>Tratado</span>{% else %}<span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Pendente</span>{% endif %}</td>
+                            <td>
+                                {% if evento.status == 'tratado' %}
+                                    <span class="badge bg-success"><i class="fas fa-check me-1"></i>Tratado</span>
+                                {% elif evento.status == 'ignorado' %}
+                                    <span class="badge bg-secondary"><i class="fas fa-times me-1"></i>Ignorado</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Pendente</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 <div class="d-flex flex-column">
                                     <span class="fw-bold">{{ evento.criado_em|date:"d/m/Y" }}</span>
@@ -199,7 +208,7 @@
                             <td>{% if evento.tratado_por %}<div class="d-flex align-items-center"><i class="fas fa-user-check text-success me-2"></i><div><div class="fw-bold">{{ evento.tratado_por }}</div><small class="text-muted">{{ evento.tratado_em|date:"d/m/Y H:i" }}</small></div></div>{% else %}<span class="text-muted">-</span>{% endif %}</td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
-                                    {% if not evento.alerta_disparado %}
+                                    {% if evento.status == 'pendente' %}
                                         <button type="button" class="btn btn-sm btn-success" onclick="marcarTratado({{ evento.id }})" title="Marcar como Tratado"><i class="fas fa-check"></i></button>
                                     {% endif %}
                                     <button type="button" class="btn btn-sm btn-info" onclick="verDetalhes({{ evento.id }})" title="Ver Detalhes"><i class="fas fa-eye"></i></button>
@@ -324,30 +333,6 @@
   </div>
 </div>
 
-<style>
-/* Variáveis, gradientes, cards, tabela, badges, responsividade - tudo mantido */
-/* Força z-index dos modais e backdrop */
-.modal-backdrop.show { z-index: 1040 !important; }
-.modal.show { z-index: 1050 !important; }
-/* Remove camada cinza de fundo para permitir interação direta */
-.modal-backdrop { display: none !important; }
-
-/* Modal de exclusão customizado */
-#excluirModal .modal-header {
-  background: linear-gradient(90deg, #e53935 0%, #b71c1c 100%);
-}
-#excluirModal .modal-footer .btn-danger {
-  background: #e53935;
-  border: none;
-}
-#excluirModal .modal-footer .btn-danger:hover {
-  background: #b71c1c;
-}
-</style>
-
-<!-- Bootstrap Bundle JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
 <script>
 let eventoAtual = null;
 let autoRefreshInterval = null;
@@ -356,10 +341,27 @@ let eventoExcluirId = null;
 // Helper to show a modal centered in viewport
 function showCenteredModal(modalId) {
   const modalEl = document.getElementById(modalId);
-  const modal = new bootstrap.Modal(modalEl, { backdrop: false });
-  // ensure no backdrop
-  document.querySelector('.modal-backdrop')?.remove();
+  const modal = new bootstrap.Modal(modalEl, { 
+    backdrop: false,
+    keyboard: true,
+    focus: true
+  });
+  
+  // Remove qualquer backdrop residual
+  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+  
   modal.show();
+}
+
+// Função para fechar modal
+function hideModal(modalId) {
+  const modalEl = document.getElementById(modalId);
+  const modal = bootstrap.Modal.getInstance(modalEl);
+  if (modal) {
+    modal.hide();
+  }
+  // Remove qualquer backdrop residual
+  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
 }
 
 // Marcar evento como tratado
@@ -395,8 +397,7 @@ function confirmarTratamento() {
     })
     .catch(() => showAlert('Erro ao processar a requisição', 'danger'))
     .finally(() => {
-      const m = bootstrap.Modal.getInstance(document.getElementById('tratamentoModal'));
-      if (m) m.hide();
+      hideModal('tratamentoModal');
       document.getElementById('acao_tomada').value = '';
       document.getElementById('observacoes').value = '';
     });
@@ -414,7 +415,7 @@ function verDetalhes(eventoId) {
       const content = document.getElementById('detalhesContent');
       if (!data.success) {
         content.innerHTML = '<div class="alert alert-danger">Erro ao carregar detalhes</div>';
-      } else if (!data.evento.alerta_disparado) {
+      } else if (data.evento.status === 'pendente') {
         content.innerHTML = '<div class="alert alert-warning">Este evento ainda não foi tratado.</div>';
       } else {
         const e = data.evento;
@@ -464,8 +465,7 @@ function confirmarExclusao() {
     })
     .catch(() => showAlert('Erro ao excluir evento', 'danger'))
     .finally(() => {
-      const modal = bootstrap.Modal.getInstance(document.getElementById('excluirModal'));
-      if (modal) modal.hide();
+      hideModal('excluirModal');
       eventoExcluirId = null;
     });
 }
@@ -532,5 +532,14 @@ setInterval(() => {
     .then(res => res.json())
     .then(data => data.total > 0 && console.log(`Novos eventos: ${data.total}`));
 }, 120000);
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Remove qualquer overlay/backdrop residual
+  document.querySelectorAll('.modal-backdrop, .popup-overlay').forEach(el => el.remove());
+  // Remove classe que pode travar o scroll
+  document.body.classList.remove('modal-open');
+  document.body.style.overflow = '';
+  document.body.style.paddingRight = '';
+});
 </script>
 {% endblock %}

@@ -22,8 +22,8 @@ from equipamentos.views import lista_equipamentos_api
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('core.urls')),
-    path('equipamentos/', include('equipamentos.urls')),
+    path('', include(('core.urls', 'core'), namespace='core')),
+    path('equipamentos/', include(('equipamentos.urls', 'equipamentos'), namespace='equipamentos')),
     path('api/equipamentos/', lista_equipamentos_api, name='api_equipamentos'),
-    path('scanner/', include('scanner.urls')),
+    path('scanner/', include(('scanner.urls', 'scanner'), namespace='scanner')),
 ]

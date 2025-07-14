@@ -15,6 +15,8 @@ from .views import (
     campos_banco_api,
 )
 
+app_name = 'equipamentos'
+
 urlpatterns = [
     # Lista de Equipamentos (Página principal)
     path("equipamentos/", EquipamentoListView.as_view(), name="equipamento_list"),

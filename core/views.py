@@ -2,10 +2,19 @@ from django.shortcuts import render
 import requests  # Importação correta da biblioteca
 from .models import altocafezalmodel, EventoTratado
 from .forms import AltocafezalModelForm
+import json
+from django.http import HttpResponse
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from io import BytesIO
+from datetime import datetime
 # Create your views here.
 from django.contrib.auth.views import LoginView, LogoutView
 from django.views.generic import TemplateView,CreateView
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.urls import reverse_lazy
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -13,30 +22,47 @@ import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_GET
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.utils.timezone import now
+from django.db import models
+
+from django.urls import reverse_lazy
+from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import TemplateView
 
 # Página inicial (apenas para usuários autenticados)
 class HomeView(LoginRequiredMixin, TemplateView):
     template_name = "core/home.html"
-    login_url = reverse_lazy("login")  # Redireciona para login se não autenticado
+    login_url = reverse_lazy('core:login')
+    redirect_field_name = 'next'
+
 
 # Página de Login (Django já fornece um formulário embutido)
 class CustomLoginView(LoginView):
     template_name = "core/login.html"
-    redirect_authenticated_user = True  # Se já estiver logado, redireciona para home
+    redirect_authenticated_user = True
+
+    def get_success_url(self):
+        # ignora qualquer 'next' e força o home
+        return reverse_lazy('core:home')
+
 
 # Página de Logout (Django já gerencia isso internamente)
 class CustomLogoutView(LogoutView):
-    next_page = reverse_lazy("login")
+    next_page = reverse_lazy('core:login')
+    http_method_names = ["get", "post", "head"]
+
     def get(self, request, *args, **kwargs):
-        return self.post(request, *args, **kwargs)# Após logout, redireciona para login
+        # logout também em GET
+        return self.post(request, *args, **kwargs)
 
-
-class MapaView(TemplateView):
+class MapaView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
     template_name = "core/mapa.html"
+    permission_required = 'core.can_access_mapa'
+    login_url = reverse_lazy("login")
     
     
 import requests
@@ -69,11 +95,63 @@ def get_t42_data(request):
         if search_id:
             if isinstance(data, list):
                 filtered_data = [unit for unit in data if str(unit.get('unitnumber', '')) == search_id]
+                
+                # Busca dados adicionais do banco local (Equipamento)
+                from equipamentos.models import Equipamento
+                try:
+                    # Usa filter().first() para evitar erro de múltiplos registros
+                    equipamento_local = Equipamento.objects.filter(identificador=search_id).first()
+                    if equipamento_local:
+                        # Adiciona os campos do banco local aos dados da API
+                        for unit in filtered_data:
+                            unit['BL'] = equipamento_local.BL or ''
+                            unit['container'] = equipamento_local.container or ''
+                            unit['destino'] = equipamento_local.destino or ''
+                            unit['lacre_inn'] = equipamento_local.lacre_inn or ''
+                            unit['lacre'] = equipamento_local.lacre or ''
+                    else:
+                        # Se não encontrar no banco local, adiciona campos vazios
+                        for unit in filtered_data:
+                            unit['BL'] = ''
+                            unit['container'] = ''
+                            unit['destino'] = ''
+                            unit['lacre_inn'] = ''
+                            unit['lacre'] = ''
+                except Exception as e:
+                    print(f"Erro ao buscar equipamento local: {e}")
+                    # Se houver erro, adiciona campos vazios
+                    for unit in filtered_data:
+                        unit['BL'] = ''
+                        unit['container'] = ''
+                        unit['destino'] = ''
+                        unit['lacre_inn'] = ''
+                        unit['lacre'] = ''
             else:
                 filtered_data = []
             return JsonResponse(filtered_data, safe=False)
         
         # Se não foi passado ID, retorna todos os dados (comportamento original)
+        # Mas ainda adiciona os campos do banco local para todos os equipamentos
+        if isinstance(data, list):
+            from equipamentos.models import Equipamento
+            equipamentos_locais = {eq.identificador: eq for eq in Equipamento.objects.all()}
+            
+            for unit in data:
+                unit_id = str(unit.get('unitnumber', ''))
+                if unit_id in equipamentos_locais:
+                    eq_local = equipamentos_locais[unit_id]
+                    unit['BL'] = eq_local.BL or ''
+                    unit['container'] = eq_local.container or ''
+                    unit['destino'] = eq_local.destino or ''
+                    unit['lacre_inn'] = eq_local.lacre_inn or ''
+                    unit['lacre'] = eq_local.lacre or ''
+                else:
+                    unit['BL'] = ''
+                    unit['container'] = ''
+                    unit['destino'] = ''
+                    unit['lacre_inn'] = ''
+                    unit['lacre'] = ''
+        
         return JsonResponse(data, safe=False)
 
     except requests.RequestException as e:
@@ -109,12 +187,62 @@ def get_assetscontrols_data(request):
         # Tenta fazer parse do JSON
         try:
             json_data = json.loads(page)
+            
+            # Busca dados do banco local para adicionar aos dados da API
+            from equipamentos.models import Equipamento
+            equipamentos_locais = {}
+            try:
+                equipamentos_locais = {eq.identificador: eq for eq in Equipamento.objects.all()}
+            except Exception as e:
+                print(f"Erro ao buscar equipamentos locais: {e}")
+            
             # Se foi passado um ID, filtra os resultados
             if search_id and json_data and 'FObject' in json_data and isinstance(json_data['FObject'], list):
-                filtered = [item for item in json_data['FObject'] if str(item.get('FAssetID', '') or item.get('FVehicleName', '')) == search_id]
-                json_data['FObject'] = filtered
+                filtered_data = [item for item in json_data['FObject'] if str(item.get('FAssetID', '') or item.get('FVehicleName', '')) == search_id]
+                
+                # Adiciona dados do banco local aos equipamentos filtrados
+                for item in filtered_data:
+                    asset_id = str(item.get('FAssetID', '') or item.get('FVehicleName', ''))
+                    print(f"Procurando asset_id: {asset_id} em {list(equipamentos_locais.keys())}")
+                    if asset_id in equipamentos_locais:
+                        eq_local = equipamentos_locais[asset_id]
+                        print(f"Encontrado! BL={eq_local.BL}, container={eq_local.container}, destino={eq_local.destino}, lacre_inn={eq_local.lacre_inn}, lacre={eq_local.lacre}")
+                        item['BL'] = eq_local.BL or ''
+                        item['container'] = eq_local.container or ''
+                        item['destino'] = eq_local.destino or ''
+                        item['lacre_inn'] = eq_local.lacre_inn or ''
+                        item['lacre'] = eq_local.lacre or ''
+                    else:
+                        print(f"Não encontrado no banco: {asset_id}")
+                        item['BL'] = ''
+                        item['container'] = ''
+                        item['destino'] = ''
+                        item['lacre_inn'] = ''
+                        item['lacre'] = ''
+                json_data['FObject'] = filtered_data
                 return JsonResponse(json_data, safe=False)
-            # Se não foi passado ID, retorna todos os dados (comportamento original)
+            
+            # Se não foi passado ID, retorna todos os dados mas adiciona dados do banco local
+            if json_data and 'FObject' in json_data and isinstance(json_data['FObject'], list):
+                for item in json_data['FObject']:
+                    asset_id = str(item.get('FAssetID', '') or item.get('FVehicleName', ''))
+                    print(f"Procurando asset_id: {asset_id} em {list(equipamentos_locais.keys())}")
+                    if asset_id in equipamentos_locais:
+                        eq_local = equipamentos_locais[asset_id]
+                        print(f"Encontrado! BL={eq_local.BL}, container={eq_local.container}, destino={eq_local.destino}, lacre_inn={eq_local.lacre_inn}, lacre={eq_local.lacre}")
+                        item['BL'] = eq_local.BL or ''
+                        item['container'] = eq_local.container or ''
+                        item['destino'] = eq_local.destino or ''
+                        item['lacre_inn'] = eq_local.lacre_inn or ''
+                        item['lacre'] = eq_local.lacre or ''
+                    else:
+                        print(f"Não encontrado no banco: {asset_id}")
+                        item['BL'] = ''
+                        item['container'] = ''
+                        item['destino'] = ''
+                        item['lacre_inn'] = ''
+                        item['lacre'] = ''
+            
             return JsonResponse(json_data, safe=False)
         except json.JSONDecodeError:
             # Se não for JSON válido, retorna como texto
@@ -493,6 +621,9 @@ def update_assetscontrols_data(request, asset_id):
             import json
             data = json.loads(request.body)
             
+            print(f"🔄 Iniciando atualização AssetsControls para ID: {asset_id}")
+            print(f"📦 Dados recebidos: {data}")
+            
             # Pega apenas os últimos 6 dígitos do ID
             golden_id = asset_id[-6:]  # Sempre pega os últimos 6 dígitos
             
@@ -506,7 +637,9 @@ def update_assetscontrols_data(request, asset_id):
             payload = {
                 'bl': data.get('bl', ''),
                 'container': data.get('container', ''),
-                'destino': data.get('destino', '')
+                'destino': data.get('destino', ''),
+                'lacre_inn': data.get('lacre_inn', ''),
+                'lacre': data.get('lacre', '')
             }
             
             # Headers
@@ -519,7 +652,7 @@ def update_assetscontrols_data(request, asset_id):
             print(f"📦 Payload: {payload}")
             
             # Faz a requisição PUT para a API Golden
-            response = requests.put(url, json=payload, headers=headers)
+            response = requests.put(url, json=payload, headers=headers, timeout=30)
             
             print(f"📡 Resposta Golden: {response.status_code}")
             
@@ -529,38 +662,125 @@ def update_assetscontrols_data(request, asset_id):
                 
                 # Também salva no banco local para backup
                 from equipamentos.models import Equipamento
-                equipamento, created = Equipamento.objects.get_or_create(
-                    identificador=asset_id,
-                    defaults={
-                        'BL': data.get('bl', ''),
-                        'container': data.get('container', ''),
-                        'destino': data.get('destino', '')
-                    }
-                )
-                
-                if not created:
-                    equipamento.BL = data.get('bl', '')
-                    equipamento.container = data.get('container', '')
-                    equipamento.destino = data.get('destino', '')
-                    equipamento.save()
+                try:
+                    # Busca todos os registros com este identificador
+                    equipamentos = Equipamento.objects.filter(identificador=asset_id)
+                    
+                    if equipamentos.exists():
+                        print(f"📝 Atualizando {equipamentos.count()} equipamento(s) existente(s): {asset_id}")
+                        
+                        # Atualiza TODOS os registros duplicados
+                        for equipamento in equipamentos:
+                            equipamento.BL = data.get('bl', '')
+                            equipamento.container = data.get('container', '')
+                            equipamento.destino = data.get('destino', '')
+                            equipamento.lacre_inn = data.get('lacre_inn', '')
+                            equipamento.lacre = data.get('lacre', '')
+                            # Corrige latitude/longitude se vierem vazias
+                            if equipamento.latitude == '' or equipamento.latitude is None:
+                                equipamento.latitude = None
+                            if equipamento.longitude == '' or equipamento.longitude is None:
+                                equipamento.longitude = None
+                            equipamento.save()
+                        
+                        created = False
+                    else:
+                        print(f"📝 Criando novo equipamento: {asset_id}")
+                        equipamento = Equipamento.objects.create(
+                            identificador=asset_id,
+                            BL=data.get('bl', ''),
+                            container=data.get('container', ''),
+                            destino=data.get('destino', ''),
+                            lacre_inn=data.get('lacre_inn', ''),
+                            lacre=data.get('lacre', '')
+                            # Não inclui latitude/longitude pois são campos numéricos
+                        )
+                        created = True
+                    
+                    print(f"✅ Banco local atualizado com sucesso")
+                    
+                except Exception as db_error:
+                    print(f"⚠️ Erro ao salvar no banco local: {str(db_error)}")
+                    # Continua mesmo com erro no banco local
+                    created = False
                 
                 return JsonResponse({
                     "success": True,
-                    "message": "Dados atualizados com sucesso na plataforma Golden",
+                    "message": "Dados atualizados com sucesso na plataforma Golden e banco local",
                     "data": {
                         "identificador": asset_id,
                         "golden_id": golden_id,
                         "bl": data.get('bl', ''),
                         "container": data.get('container', ''),
-                        "destino": data.get('destino', '')
+                        "destino": data.get('destino', ''),
+                        "lacre_inn": data.get('lacre_inn', ''),
+                        "lacre": data.get('lacre', ''),
+                        "banco_local": "atualizado" if not created else "criado"
                     }
                 })
             else:
                 print(f"❌ Erro Golden: {response.status_code} - {response.text}")
-                return JsonResponse({
-                    "success": False,
-                    "error": f"Erro na API Golden: {response.status_code} - {response.text}"
-                }, status=response.status_code)
+                
+                # Tenta salvar apenas no banco local como fallback
+                try:
+                    from equipamentos.models import Equipamento
+                    # Busca todos os registros com este identificador
+                    equipamentos = Equipamento.objects.filter(identificador=asset_id)
+                    
+                    if equipamentos.exists():
+                        print(f"📝 Atualizando {equipamentos.count()} equipamento(s) existente(s) no fallback: {asset_id}")
+                        
+                        # Atualiza TODOS os registros duplicados
+                        for equipamento in equipamentos:
+                            equipamento.BL = data.get('bl', '')
+                            equipamento.container = data.get('container', '')
+                            equipamento.destino = data.get('destino', '')
+                            equipamento.lacre_inn = data.get('lacre_inn', '')
+                            equipamento.lacre = data.get('lacre', '')
+                            # Corrige latitude/longitude se vierem vazias
+                            if equipamento.latitude == '' or equipamento.latitude is None:
+                                equipamento.latitude = None
+                            if equipamento.longitude == '' or equipamento.longitude is None:
+                                equipamento.longitude = None
+                            equipamento.save()
+                        
+                        created = False
+                    else:
+                        equipamento = Equipamento.objects.create(
+                            identificador=asset_id,
+                            BL=data.get('bl', ''),
+                            container=data.get('container', ''),
+                            destino=data.get('destino', ''),
+                            lacre_inn=data.get('lacre_inn', ''),
+                            lacre=data.get('lacre', '')
+                            # Não inclui latitude/longitude pois são campos numéricos
+                        )
+                        created = True
+                    
+                    print(f"⚠️ Dados salvos apenas no banco local devido a erro na API Golden")
+                    
+                    return JsonResponse({
+                        "success": True,
+                        "message": "Dados salvos no banco local (API Golden indisponível)",
+                        "data": {
+                            "identificador": asset_id,
+                            "golden_id": golden_id,
+                            "bl": data.get('bl', ''),
+                            "container": data.get('container', ''),
+                            "destino": data.get('destino', ''),
+                            "lacre_inn": data.get('lacre_inn', ''),
+                            "lacre": data.get('lacre', ''),
+                            "banco_local": "atualizado",
+                            "golden_api": "erro"
+                        }
+                    })
+                    
+                except Exception as db_error:
+                    print(f"❌ Erro também no banco local: {str(db_error)}")
+                    return JsonResponse({
+                        "success": False,
+                        "error": f"Erro na API Golden ({response.status_code}) e no banco local: {str(db_error)}"
+                    }, status=500)
                 
         except Exception as e:
             print(f"💥 Erro na função update_assetscontrols_data: {str(e)}")
@@ -702,6 +922,9 @@ def update_t42_data(request, unit_id):
             import json
             data = json.loads(request.body)
             
+            print(f"🔄 Iniciando atualização T42 para ID: {unit_id}")
+            print(f"📦 Dados recebidos: {data}")
+            
             # URL da API Golden (T42)
             url = f'https://intgoldensat.com.br/nestle/api/grid/{unit_id}/'
             
@@ -709,7 +932,9 @@ def update_t42_data(request, unit_id):
             payload = {
                 'bl': data.get('bl', ''),
                 'container': data.get('container', ''),
-                'destino': data.get('destino', '')
+                'destino': data.get('destino', ''),
+                'lacre_inn': data.get('lacre_inn', ''),
+                'lacre': data.get('lacre', '')
             }
             
             # Headers
@@ -722,7 +947,7 @@ def update_t42_data(request, unit_id):
             print(f"📦 Payload: {payload}")
             
             # Faz a requisição PUT para a API Golden através do backend
-            response = requests.put(url, json=payload, headers=headers)
+            response = requests.put(url, json=payload, headers=headers, timeout=30)
             
             print(f"📡 Resposta Golden: {response.status_code}")
             
@@ -730,17 +955,125 @@ def update_t42_data(request, unit_id):
                 response_data = response.json()
                 print(f"✅ Golden atualizado com sucesso: {response_data}")
                 
+                # Também salva no banco local para backup
+                from equipamentos.models import Equipamento
+                try:
+                    # Busca todos os registros com este identificador
+                    equipamentos = Equipamento.objects.filter(identificador=unit_id)
+                    
+                    if equipamentos.exists():
+                        print(f"📝 Atualizando {equipamentos.count()} equipamento(s) existente(s): {unit_id}")
+                        
+                        # Atualiza TODOS os registros duplicados
+                        for equipamento in equipamentos:
+                            equipamento.BL = data.get('bl', '')
+                            equipamento.container = data.get('container', '')
+                            equipamento.destino = data.get('destino', '')
+                            equipamento.lacre_inn = data.get('lacre_inn', '')
+                            equipamento.lacre = data.get('lacre', '')
+                            # Corrige latitude/longitude se vierem vazias
+                            if equipamento.latitude == '' or equipamento.latitude is None:
+                                equipamento.latitude = None
+                            if equipamento.longitude == '' or equipamento.longitude is None:
+                                equipamento.longitude = None
+                            equipamento.save()
+                        
+                        created = False
+                    else:
+                        print(f"📝 Criando novo equipamento: {unit_id}")
+                        equipamento = Equipamento.objects.create(
+                            identificador=unit_id,
+                            BL=data.get('bl', ''),
+                            container=data.get('container', ''),
+                            destino=data.get('destino', ''),
+                            lacre_inn=data.get('lacre_inn', ''),
+                            lacre=data.get('lacre', '')
+                            # Não inclui latitude/longitude pois são campos numéricos
+                        )
+                        created = True
+                    
+                    print(f"✅ Banco local atualizado com sucesso")
+                    
+                except Exception as db_error:
+                    print(f"⚠️ Erro ao salvar no banco local: {str(db_error)}")
+                    # Continua mesmo com erro no banco local
+                    created = False
+                
                 return JsonResponse({
                     "success": True,
-                    "message": "Dados atualizados com sucesso na plataforma Golden",
-                    "data": response_data
+                    "message": "Dados atualizados com sucesso na plataforma Golden e banco local",
+                    "data": {
+                        "identificador": unit_id,
+                        "bl": data.get('bl', ''),
+                        "container": data.get('container', ''),
+                        "destino": data.get('destino', ''),
+                        "lacre_inn": data.get('lacre_inn', ''),
+                        "lacre": data.get('lacre', ''),
+                        "banco_local": "atualizado" if not created else "criado"
+                    }
                 })
             else:
                 print(f"❌ Erro Golden: {response.status_code} - {response.text}")
-                return JsonResponse({
-                    "success": False,
-                    "error": f"Erro na API Golden: {response.status_code} - {response.text}"
-                }, status=response.status_code)
+                
+                # Tenta salvar apenas no banco local como fallback
+                try:
+                    from equipamentos.models import Equipamento
+                    # Busca todos os registros com este identificador
+                    equipamentos = Equipamento.objects.filter(identificador=unit_id)
+                    
+                    if equipamentos.exists():
+                        print(f"📝 Atualizando {equipamentos.count()} equipamento(s) existente(s) no fallback: {unit_id}")
+                        
+                        # Atualiza TODOS os registros duplicados
+                        for equipamento in equipamentos:
+                            equipamento.BL = data.get('bl', '')
+                            equipamento.container = data.get('container', '')
+                            equipamento.destino = data.get('destino', '')
+                            equipamento.lacre_inn = data.get('lacre_inn', '')
+                            equipamento.lacre = data.get('lacre', '')
+                            # Corrige latitude/longitude se vierem vazias
+                            if equipamento.latitude == '' or equipamento.latitude is None:
+                                equipamento.latitude = None
+                            if equipamento.longitude == '' or equipamento.longitude is None:
+                                equipamento.longitude = None
+                            equipamento.save()
+                        
+                        created = False
+                    else:
+                        equipamento = Equipamento.objects.create(
+                            identificador=unit_id,
+                            BL=data.get('bl', ''),
+                            container=data.get('container', ''),
+                            destino=data.get('destino', ''),
+                            lacre_inn=data.get('lacre_inn', ''),
+                            lacre=data.get('lacre', '')
+                            # Não inclui latitude/longitude pois são campos numéricos
+                        )
+                        created = True
+                    
+                    print(f"⚠️ Dados salvos apenas no banco local devido a erro na API Golden")
+                    
+                    return JsonResponse({
+                        "success": True,
+                        "message": "Dados salvos no banco local (API Golden indisponível)",
+                        "data": {
+                            "identificador": unit_id,
+                            "bl": data.get('bl', ''),
+                            "container": data.get('container', ''),
+                            "destino": data.get('destino', ''),
+                            "lacre_inn": data.get('lacre_inn', ''),
+                            "lacre": data.get('lacre', ''),
+                            "banco_local": "atualizado",
+                            "golden_api": "erro"
+                        }
+                    })
+                    
+                except Exception as db_error:
+                    print(f"❌ Erro também no banco local: {str(db_error)}")
+                    return JsonResponse({
+                        "success": False,
+                        "error": f"Erro na API Golden ({response.status_code}) e no banco local: {str(db_error)}"
+                    }, status=500)
                 
         except Exception as e:
             print(f"💥 Erro na função update_t42_data: {str(e)}")
@@ -758,6 +1091,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
 
 @csrf_exempt
+@login_required
+@permission_required('core.can_access_eventos', login_url='login')
 def eventos_recentes(request):
     eventos = cache.get("eventos_recentes", [])
     return JsonResponse({"eventos": eventos, "total": len(eventos)})
@@ -778,6 +1113,8 @@ from django.db.models import Max
 from core.models import EventoTratado
 
 @require_GET
+@login_required
+@permission_required('core.can_access_eventos', login_url='login')
 def alertas_api(request):
     """
     Retorna somente os eventos MAIS RECENTES do banco.
@@ -813,11 +1150,12 @@ def alertas_api(request):
 
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import json
 
+@login_required
+@permission_required('core.can_access_eventos', login_url='login')
 def eventos_list_view(request):
     """
     View para listar todos os eventos com paginação e filtros
@@ -831,12 +1169,12 @@ def eventos_list_view(request):
     # Query base
     eventos = EventoTratado.objects.all()
     
+    # Excluir eventos já tratados (tratado_por preenchido)
+    eventos = eventos.filter(models.Q(tratado_por__isnull=True) | models.Q(tratado_por=""))
+    
     # Aplicar filtros
     if status_filter:
-        if status_filter == 'pendente':
-            eventos = eventos.filter(alerta_disparado=False)
-        elif status_filter == 'tratado':
-            eventos = eventos.filter(alerta_disparado=True)
+        eventos = eventos.filter(status=status_filter)
     
     if tipo_filter:
         eventos = eventos.filter(tipo_evento__icontains=tipo_filter)
@@ -857,8 +1195,8 @@ def eventos_list_view(request):
     
     # Estatísticas
     total_eventos = eventos.count()
-    pendentes = eventos.filter(alerta_disparado=False).count()
-    tratados = eventos.filter(alerta_disparado=True).count()
+    pendentes = eventos.filter(status='pendente').count()
+    tratados = eventos.filter(status='tratado').count()
     
     # Adiciona informações de tratamento aos eventos
     for evento in page_obj:
@@ -874,12 +1212,14 @@ def eventos_list_view(request):
         'tipo_filter': tipo_filter,
         'guid_filter': guid_filter,
         'acao_filter': acao_filter,
+        'guids_unicos': sorted(list(EventoTratado.objects.values_list('guid', flat=True).distinct())),
     }
     
     return render(request, 'core/eventos.html', context)
 
 
 @login_required
+@permission_required('core.can_access_eventos', login_url='login')
 @require_http_methods(["POST"])
 @csrf_exempt
 def tratar_evento(request, evento_id):
@@ -890,7 +1230,7 @@ def tratar_evento(request, evento_id):
         evento = EventoTratado.objects.get(id=evento_id)
         
         # Se já foi tratado, retorna erro
-        if evento.alerta_disparado:
+        if evento.status != 'pendente':
             return JsonResponse({
                 'success': False,
                 'error': 'Evento já foi tratado'
@@ -932,6 +1272,7 @@ def tratar_evento(request, evento_id):
 
 
 @login_required
+@permission_required('core.can_access_eventos', login_url='login')
 @require_http_methods(["DELETE"])
 @csrf_exempt
 def excluir_evento(request, evento_id):
@@ -960,6 +1301,7 @@ def excluir_evento(request, evento_id):
 
 
 @login_required
+@permission_required('core.can_access_eventos', login_url='login')
 def detalhes_evento(request, evento_id):
     """
     Retorna detalhes de um evento específico
@@ -975,6 +1317,7 @@ def detalhes_evento(request, evento_id):
                 'tipo_evento': evento.tipo_evento,
                 'valor': evento.valor,
                 'criado_em': evento.criado_em.isoformat(),
+                'status': evento.status,
                 'alerta_disparado': evento.alerta_disparado,
                 'tratado_em': evento.tratado_em.isoformat() if evento.tratado_em else None,
                 'tratado_por': evento.tratado_por,
@@ -996,56 +1339,149 @@ def detalhes_evento(request, evento_id):
 
 
 @login_required
+@permission_required('core.can_access_eventos', login_url='login')
 def exportar_eventos(request):
     """
     Exporta eventos filtrados para CSV
     """
-    import csv
-    from django.http import HttpResponse
-    
-    # Aplica os mesmos filtros da view de listagem
-    status_filter = request.GET.get('status', '')
-    tipo_filter = request.GET.get('tipo', '')
-    guid_filter = request.GET.get('guid', '')
-    
-    eventos = EventoTratado.objects.all()
-    
-    if status_filter:
-        if status_filter == 'pendente':
-            eventos = eventos.filter(alerta_disparado=False)
-        elif status_filter == 'tratado':
-            eventos = eventos.filter(alerta_disparado=True)
-    
-    if tipo_filter:
-        eventos = eventos.filter(tipo_evento__icontains=tipo_filter)
-    
-    if guid_filter:
-        eventos = eventos.filter(guid__icontains=guid_filter)
-    
-    eventos = eventos.order_by('-criado_em')
-    
-    # Cria a resposta HTTP com CSV
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = f'attachment; filename="eventos_{now().strftime("%Y%m%d_%H%M%S")}.csv"'
-    
-    writer = csv.writer(response)
-    writer.writerow([
-        'ID', 'GUID', 'Tipo Evento', 'Valor', 'Criado em', 
-        'Status', 'Tratado em', 'Tratado por', 'Ação tomada', 'Observações'
-    ])
-    
-    for evento in eventos:
-        writer.writerow([
-            evento.id,
-            evento.guid,
-            evento.tipo_evento,
-            evento.valor,
-            evento.criado_em.strftime('%d/%m/%Y %H:%M:%S'),
-            'Tratado' if evento.alerta_disparado else 'Pendente',
-            evento.tratado_em.strftime('%d/%m/%Y %H:%M:%S') if evento.tratado_em else '',
-            evento.tratado_por or '',
-            evento.acao_tomada or '',
-            evento.observacoes or ''
-        ])
-    
-    return response
+    # ... código existente ...
+
+
+
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required, permission_required
+from django.views.decorators.http import require_http_methods
+import json
+import requests
+from io import BytesIO
+from datetime import datetime, timedelta
+from django.utils.timezone import now as tz_now
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+
+# Configurações da API
+T42_API_URL = "https://mongol.brono.com/mongol/api.php"
+T42_USER    = "wimc_u_nestle"
+T42_PASS    = "Inte@20xx"
+
+# Mapeamento de códigos de reason para texto
+REASON_MAP = {
+    4: "Saída de Perímetro",
+    14: "Atualização de Localização",
+    2: "Heartbeat",
+    255: "Status Regular",
+    # adicione outros se desejar...
+}
+
+@login_required
+@permission_required('core.can_access_mapa', login_url='login')
+@require_http_methods(["POST"])
+def gerar_historico_pdf(request):
+    """
+    Gera PDF formatado por registro, para os últimos 14 dias até agora.
+    Body: {"unitnumber": "..."}
+    """
+    try:
+        body = json.loads(request.body.decode())
+        unit = body.get('unitnumber')
+        if not unit:
+            return HttpResponse('unitnumber é obrigatório.', status=400)
+
+        # intervalo de 14 dias até agora
+        agora = tz_now()
+        inicio = agora - timedelta(days=14)
+        start = inicio.strftime("%Y%m%d%H%M%S")
+        end   = agora.strftime("%Y%m%d%H%M%S")
+
+        # consulta T42
+        params = {
+            "commandname": "get_history",
+            "user": T42_USER, "pass": T42_PASS,
+            "unitnumber": unit, "start": start,
+            "end": end, "format": "json"
+        }
+        resp = requests.get(T42_API_URL, params=params)
+        resp.raise_for_status()
+        records = resp.json()
+
+        # ambiente ReportLab
+        buf = BytesIO()
+        doc = SimpleDocTemplate(buf, pagesize=A4,
+                                leftMargin=inch/2, rightMargin=inch/2,
+                                topMargin=inch/2, bottomMargin=inch/2)
+        styles = getSampleStyleSheet()
+        heading = ParagraphStyle('Heading', parent=styles['Heading2'], spaceAfter=6)
+        normal  = styles['Normal']
+
+        elements = [Paragraph(f"Histórico do Equipamento {unit}", styles['Title']),
+                    Spacer(1, 12)]
+
+        if not isinstance(records, list) or not records:
+            elements.append(Paragraph("Nenhum registro encontrado nos últimos 14 dias.", normal))
+        else:
+            for rec in records:
+                # formata datas
+                dt_act = rec.get('datetime_actual', '')
+                dt_utc = rec.get('datetime_utc', '')
+                def fmt(dt):
+                    if isinstance(dt, str) and len(dt) >= 12:
+                        return f"{dt[:4]}/{dt[4:6]}/{dt[6:8]} {dt[8:10]}:{dt[10:12]}"
+                    return dt
+
+                # campos básicos
+                sv    = rec.get('software_version', '')
+                reason_code = rec.get('reason', '')
+                reason_txt  = REASON_MAP.get(reason_code, f"Código {reason_code}")
+                lon   = rec.get('longitude', '')
+                lat   = rec.get('latitude', '')
+                alt   = rec.get('altitude', '')
+                installed = "Sim" if rec.get('installed') else "Não"
+                door      = rec.get('door')
+                porta_txt = "Aberta" if door == 1 else "Fechada"
+                voltage   = rec.get('main_voltage')
+                bat_pct   = f"{max(0, min(100, int((voltage-3.5)/(4.17-3.5)*100)))}%" if voltage else "N/A"
+                temp      = rec.get('temperature', 'N/A')
+                light     = rec.get('light', 'N/A')
+                uncertainty = rec.get('uncertainty', 'N/A')
+
+                # seção Detalhes
+                elements.append(Paragraph("Detalhes", heading))
+                elements.append(Paragraph(f"- Recebida: {fmt(dt_act)}", normal))
+                elements.append(Paragraph(f"- Razão: {reason_txt}", normal))
+                elements.append(Paragraph(f"- Versão: {sv}", normal))
+                elements.append(Spacer(1, 6))
+
+                # seção Localização
+                elements.append(Paragraph("Localização", heading))
+                elements.append(Paragraph(f"- Última posição válida: {fmt(dt_utc)}", normal))
+                elements.append(Paragraph(f"- Incerteza: {uncertainty}", normal))
+                elements.append(Paragraph(f"- Coordenadas: ({lon}, {lat})", normal))
+                elements.append(Paragraph(f"- Altitude: {alt} Metros", normal))
+                elements.append(Spacer(1, 6))
+
+                # seção Entrada/Saída
+                elements.append(Paragraph("Entrada/Saída", heading))
+                elements.append(Paragraph(f"- Instalado: {installed}", normal))
+                elements.append(Paragraph(f"- Porta: {porta_txt}", normal))
+                elements.append(Paragraph(f"- Bateria: {bat_pct} / {voltage}v", normal))
+                elements.append(Paragraph(f"- Temperatura: {temp}c", normal))
+                elements.append(Paragraph(f"- Luz: {light}", normal))
+                elements.append(Spacer(1, 12))
+
+        # finaliza PDF
+        doc.build(elements)
+        buf.seek(0)
+        pdf = buf.getvalue()
+
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="historico_{unit}.pdf"'
+        return response
+
+    except json.JSONDecodeError:
+        return HttpResponse('JSON inválido.', status=400)
+    except requests.RequestException as e:
+        return HttpResponse(f'Erro na API T42: {e}', status=502)
+    except Exception as e:
+        return HttpResponse(f'Erro interno: {e}', status=500)
