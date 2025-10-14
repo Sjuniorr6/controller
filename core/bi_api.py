@@ -230,13 +230,23 @@ def consolidate_equipment_data(include_geocoding: bool = False) -> List[Dict[str
             endereco = cache.get(cache_key)
         
         # Data de atualização (formato brasileiro com horário de Brasília)
-        data_atualizacao = asset.get('FUpdateTime', '')
+        # Usa FRecvTime (tempo de recepção) ou FGPSTime (tempo GPS) como fallback
+        data_atualizacao = asset.get('FRecvTime', '') or asset.get('FGPSTime', '')
         if data_atualizacao:
             try:
-                # Parse do formato YYYY-MM-DD HH:MM:SS (assume UTC)
-                dt = datetime.strptime(data_atualizacao, '%Y-%m-%d %H:%M:%S')
+                # Remove o 'Z' no final e tenta parsear como ISO 8601
+                # Formato: 2025-09-29T17:15:36.447937Z ou 2025-09-29T17:15:35Z
+                if data_atualizacao.endswith('Z'):
+                    data_atualizacao = data_atualizacao[:-1]
+                
+                # Tenta parsear com microsegundos primeiro, depois sem
+                try:
+                    dt = datetime.strptime(data_atualizacao, '%Y-%m-%dT%H:%M:%S.%f')
+                except ValueError:
+                    dt = datetime.strptime(data_atualizacao, '%Y-%m-%dT%H:%M:%S')
+                
                 data_atualizacao = converter_para_brasilia(dt)
-            except ValueError:
+            except (ValueError, AttributeError):
                 data_atualizacao = converter_para_brasilia(now())
         else:
             data_atualizacao = converter_para_brasilia(now())

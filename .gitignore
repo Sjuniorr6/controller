@@ -1,2 +1,77 @@
-# ────────────── Arquivos de BD locais ─────────────*.sqlite3*.sqlite3-journal*.sqlite3-shm*.sqlite3-walt42.sqlite3**.db# ────────────── Celery / agendador ────────────────celerybeat-schedule*celerybeat.pid# ────────────── Python "lixo" de compilação ───────*.py[cod]*$py.class__pycache__/*.so.Python# ────────────── Ambientes virtuais comuns ─────────venv/env/.env/.venv/ENV/env.bak/venv.bak/# ────────────── Configs locais / segredos ─────────*.env.env.**.local# ────────────── Arquivos de logs e cache ──────────*.log*.pot*.mo.DS_Store*.swp*.swo*~# ────────────── IDEs e Editores ───────────────────.vscode/.idea/*.sublime-*.project.pydevproject# ────────────── Arquivos de teste ─────────────────test_alerts.pytest_powerbi_api.pytest_geofencing.pytest_*.pytest_*.html# ────────────── Django específico ─────────────────staticfiles/media/*.pyclocal_settings.pydb.sqlite3# ────────────── Arquivos temporários ──────────────*.bak*.tmp*.temp*.dump*.sqldump.sql# ────────────── Sistema Operacional ───────────────Thumbs.db.DS_StoreDesktop.inicelerybeat-schedule
+# ────────────── Arquivos de BD locais ─────────────
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-shm
+*.sqlite3-wal
+t42.sqlite3*
+*.db
+
+# ────────────── Celery / agendador ────────────────
+celerybeat-schedule*
+celerybeat.pid
+
+# ────────────── Python "lixo" de compilação ───────
+*.py[cod]
+*$py.class
+*__pycache__/
+*.so
+.Python
+
+# ────────────── Ambientes virtuais comuns ─────────
+venv/
+env/
+.env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ────────────── Configs locais / segredos ─────────
+*.env
+.env.*
+*.local
+
+# ────────────── Arquivos de logs e cache ──────────
+*.log
+*.pot
+*.mo
+.DS_Store
+*.swp
+*.swo
+*~
+
+# ────────────── IDEs e Editores ───────────────────
+.vscode/
+.idea/
+*.sublime-*
+.project
+.pydevproject
+
+# ────────────── Arquivos de teste ─────────────────
+test_alerts.py
+test_powerbi_api.py
+test_geofencing.py
+test_*.py
+test_*.html
+
+# ────────────── Django específico ─────────────────
+staticfiles/
+media/
+*.pyc
+local_settings.py
+db.sqlite3
+
+# ────────────── Arquivos temporários ──────────────
+*.bak
+*.tmp
+*.temp
+*.dump
+*.sql
+dump.sql
+
+# ────────────── Sistema Operacional ───────────────
+Thumbs.db
+.DS_Store
+Desktop.ini
+celerybeat-schedule
 celerybeat-schedule.db
