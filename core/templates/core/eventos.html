@@ -79,6 +79,31 @@
         </div>
     </div>
 
+    <!-- Estatísticas de Geofencing -->
+    {% if total_alertas_geo > 0 %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info border-0 shadow-sm d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-map-marked-alt fa-2x me-3"></i>
+                    <div>
+                        <h6 class="mb-1 fw-bold">Alertas de Geofencing Ativos</h6>
+                        <p class="mb-0">
+                            <span class="badge bg-danger me-2"><i class="fas fa-tractor me-1"></i>{{ saidas_fazenda }} Saída(s) de Fazenda</span>
+                            <span class="badge bg-warning text-dark"><i class="fas fa-ship me-1"></i>{{ parados_porto }} Parado(s) no Porto</span>
+                        </p>
+                    </div>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-info" onclick="window.open('/admin/core/alertageofencing/', '_blank')">
+                        <i class="fas fa-external-link-alt me-1"></i>Ver no Admin
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Filtros -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white border-0">
@@ -102,8 +127,10 @@
                     <label for="tipo" class="form-label fw-bold">Tipo de Evento</label>
                     <select name="tipo" id="tipo" class="form-select">
                         <option value="">Todos os Tipos</option>
-                        <option value="door" {% if tipo_filter == 'door' %}selected{% endif %}>Porta</option>
-                        <option value="light" {% if tipo_filter == 'light' %}selected{% endif %}>Luminosidade</option>
+                        <option value="door" {% if tipo_filter == 'door' %}selected{% endif %}>🚪 Porta</option>
+                        <option value="light" {% if tipo_filter == 'light' %}selected{% endif %}>💡 Luminosidade</option>
+                        <option value="fazenda" {% if tipo_filter == 'fazenda' %}selected{% endif %}>🚜 Saída de Fazenda</option>
+                        <option value="porto" {% if tipo_filter == 'porto' %}selected{% endif %}>🚢 Parado no Porto</option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -176,6 +203,10 @@
                                     <span class="badge bg-danger"><i class="fas fa-door-open me-1"></i>Porta</span>
                                 {% elif evento.tipo_evento == 'light' %}
                                     <span class="badge bg-warning text-dark"><i class="fas fa-lightbulb me-1"></i>Luz</span>
+                                {% elif evento.tipo_evento == 'Saída de Fazenda' %}
+                                    <span class="badge bg-danger"><i class="fas fa-tractor me-1"></i>Saída de Fazenda</span>
+                                {% elif evento.tipo_evento == 'Parado no Porto' %}
+                                    <span class="badge bg-warning text-dark"><i class="fas fa-ship me-1"></i>Parado no Porto</span>
                                 {% else %}
                                     <span class="badge bg-secondary"><i class="fas fa-question me-1"></i>{{ evento.tipo_evento }}</span>
                                 {% endif %}

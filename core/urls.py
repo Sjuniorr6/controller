@@ -11,6 +11,7 @@ from .views import (
     eventos_list_view, tratar_evento, excluir_evento, detalhes_evento, exportar_eventos,
     gerar_historico_pdf
 )
+from .bi_api import bi_dashboard_api, bi_dashboard_stats, bi_dashboard_refresh
 
 app_name = 'core'
 
@@ -62,4 +63,9 @@ urlpatterns = [
      path("api/eventos/<int:evento_id>/detalhes/", detalhes_evento, name="detalhes_evento"),
      path("api/eventos/export/", exportar_eventos, name="exportar_eventos"),
      path("api/gerar-historico-pdf/", gerar_historico_pdf, name="gerar_historico_pdf"),
+     
+     # PowerBI API
+     path("bi-dashboard/", bi_dashboard_api, name="bi_dashboard"),
+     path("bi-dashboard/stats/", bi_dashboard_stats, name="bi_dashboard_stats"),
+     path("bi-dashboard/refresh/", bi_dashboard_refresh, name="bi_dashboard_refresh"),
 ]

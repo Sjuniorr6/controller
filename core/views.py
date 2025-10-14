@@ -1159,6 +1159,7 @@ import json
 def eventos_list_view(request):
     """
     View para listar todos os eventos com paginação e filtros
+    Inclui eventos de porta/luz E alertas de geofencing
     """
     # Parâmetros de filtro
     status_filter = request.GET.get('status', '')
@@ -1166,7 +1167,7 @@ def eventos_list_view(request):
     guid_filter = request.GET.get('guid', '')
     acao_filter = request.GET.get('acao', '')
     
-    # Query base
+    # Query base - EventoTratado (porta/luz)
     eventos = EventoTratado.objects.all()
     
     # Excluir eventos já tratados (tratado_por preenchido)
@@ -1185,22 +1186,69 @@ def eventos_list_view(request):
     if acao_filter:
         eventos = eventos.filter(acao_tomada=acao_filter)
     
+    # Adicionar alertas de geofencing
+    from .models import AlertaGeofencing
+    alertas_geo = AlertaGeofencing.objects.filter(resolvido=False)
+    
+    # Aplicar filtros em alertas de geofencing
+    if status_filter:
+        alertas_geo = alertas_geo.filter(status=status_filter)
+    
+    if tipo_filter:
+        # Mapeia tipos de alerta para filtro
+        if 'fazenda' in tipo_filter.lower() or 'saida' in tipo_filter.lower():
+            alertas_geo = alertas_geo.filter(tipo_alerta=AlertaGeofencing.TIPO_SAIDA_FAZENDA)
+        elif 'porto' in tipo_filter.lower() or 'parado' in tipo_filter.lower():
+            alertas_geo = alertas_geo.filter(tipo_alerta=AlertaGeofencing.TIPO_PARADO_PORTO)
+    
+    if guid_filter:
+        alertas_geo = alertas_geo.filter(guid__icontains=guid_filter)
+    
+    # Converter alertas de geofencing para objetos compatíveis com template
+    class AlertaWrapper:
+        """Wrapper para fazer AlertaGeofencing compatível com template de EventoTratado"""
+        def __init__(self, alerta):
+            self.id = alerta.id
+            self.guid = alerta.guid
+            self.nome_equipamento = alerta.nome_equipamento
+            self.tipo_evento = alerta.get_tipo_alerta_display()
+            self.tipo_alerta_codigo = alerta.tipo_alerta
+            self.valor = f"{alerta.dias_parado} dias" if alerta.tipo_alerta == AlertaGeofencing.TIPO_PARADO_PORTO else alerta.nome_local
+            self.status = alerta.status
+            self.criado_em = alerta.criado_em
+            self.alerta_disparado = alerta.alerta_disparado
+            self.tratado_em = alerta.tratado_em
+            self.tratado_por = alerta.tratado_por
+            self.observacoes = alerta.observacoes
+            self.acao_tomada = ''
+            self.is_geofencing = True
+            self.alerta_original = alerta
+    
+    # Combinar eventos e alertas
+    alertas_wrapped = [AlertaWrapper(a) for a in alertas_geo]
+    todos_eventos = list(eventos) + alertas_wrapped
+    
     # Ordenar por data de criação (mais recentes primeiro)
-    eventos = eventos.order_by('-criado_em')
+    todos_eventos.sort(key=lambda x: x.criado_em, reverse=True)
     
     # Paginação
-    paginator = Paginator(eventos, 10)  # 20 eventos por página
+    paginator = Paginator(todos_eventos, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
     # Estatísticas
-    total_eventos = eventos.count()
-    pendentes = eventos.filter(status='pendente').count()
-    tratados = eventos.filter(status='tratado').count()
+    total_eventos = len(todos_eventos)
+    pendentes = len([e for e in todos_eventos if e.status == 'pendente'])
+    tratados = len([e for e in todos_eventos if e.status == 'tratado'])
+    
+    # Estatísticas de geofencing
+    total_alertas_geo = alertas_geo.count()
+    saidas_fazenda = alertas_geo.filter(tipo_alerta=AlertaGeofencing.TIPO_SAIDA_FAZENDA).count()
+    parados_porto = alertas_geo.filter(tipo_alerta=AlertaGeofencing.TIPO_PARADO_PORTO).count()
     
     # Adiciona informações de tratamento aos eventos
     for evento in page_obj:
-        if evento.alerta_disparado and evento.tratado_em:
+        if hasattr(evento, 'alerta_disparado') and evento.alerta_disparado and evento.tratado_em:
             evento.tempo_tratamento = evento.tratado_em - evento.criado_em
     
     context = {
@@ -1208,11 +1256,14 @@ def eventos_list_view(request):
         'total_eventos': total_eventos,
         'pendentes': pendentes,
         'tratados': tratados,
+        'total_alertas_geo': total_alertas_geo,
+        'saidas_fazenda': saidas_fazenda,
+        'parados_porto': parados_porto,
         'status_filter': status_filter,
         'tipo_filter': tipo_filter,
         'guid_filter': guid_filter,
         'acao_filter': acao_filter,
-        'guids_unicos': sorted(list(EventoTratado.objects.values_list('guid', flat=True).distinct())),
+        'guids_unicos': sorted(list(set(list(EventoTratado.objects.values_list('guid', flat=True).distinct()) + list(AlertaGeofencing.objects.values_list('guid', flat=True).distinct())))),
     }
     
     return render(request, 'core/eventos.html', context)

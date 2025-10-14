@@ -46,7 +46,16 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.verificar_alertas_equipamentos',
         'schedule': timedelta(seconds=10.0),
     },
+    'atualizar_dados_powerbi_4x_dia': {
+    'task': 'core.tasks.atualizar_dados_powerbi',
+    'schedule': crontab(minute=0, hour='*/6'),  # A cada 6 horas (00:00, 06:00, 12:00, 18:00)
+    },
+    'verificar_geofencing_equipamentos': {
+        'task': 'core.tasks.verificar_geofencing_equipamentos',
+        'schedule': timedelta(minutes=5),  # A cada 5 minutos
+    },
 }
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
