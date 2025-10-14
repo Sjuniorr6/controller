@@ -1,0 +1,585 @@
+{% extends "base.html" %}
+{% block title %}Histórico de Equipamentos - T42{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row justify-content-center mb-4">
+        <div class="col-12">
+            <div class="text-center">
+                <h1 class="display-4 fw-bold text-primary mb-3">
+                    <i class="fas fa-history me-3"></i>
+                    Histórico de Equipamentos
+                </h1>
+                <p class="lead text-muted">
+                    Todos os equipamentos registrados por {{ user.username }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatísticas -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-box text-primary" style="font-size: 2rem;"></i>
+                    <h4 class="mt-2 mb-1">{{ total_equipamentos }}</h4>
+                    <p class="text-muted mb-0">Total de Equipamentos</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-shield-alt text-success" style="font-size: 2rem;"></i>
+                    <h4 class="mt-2 mb-1">{{ total_guardians }}</h4>
+                    <p class="text-muted mb-0">Guardians</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-door-open text-warning" style="font-size: 2rem;"></i>
+                    <h4 class="mt-2 mb-1">{{ total_sensores }}</h4>
+                    <p class="text-muted mb-0">Sensores de Porta</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6 mb-3">
+            <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card-body">
+                    <i class="fas fa-microchip text-info" style="font-size: 2rem;"></i>
+                    <h4 class="mt-2 mb-1">{{ total_tetis }}</h4>
+                    <p class="text-muted mb-0">Tetis</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-filter me-2"></i>
+                Filtros de Busca
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="codigo" class="form-label">Código do Equipamento</label>
+                    <input type="text" class="form-control" id="codigo" name="codigo" 
+                           value="{{ codigo_filter }}" placeholder="Digite o código...">
+                </div>
+                <div class="col-md-3">
+                    <label for="tipo" class="form-label">Tipo de Equipamento</label>
+                    <select class="form-select" id="tipo" name="tipo">
+                        <option value="">Todos os tipos</option>
+                        {% for valor, nome in tipos_choices %}
+                            <option value="{{ valor }}" {% if tipo_filter == valor %}selected{% endif %}>
+                                {{ nome }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="data_inicio" class="form-label">Data Início</label>
+                    <input type="date" class="form-control" id="data_inicio" name="data_inicio" 
+                           value="{{ data_inicio }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="data_fim" class="form-label">Data Fim</label>
+                    <input type="date" class="form-control" id="data_fim" name="data_fim" 
+                           value="{{ data_fim }}">
+                </div>
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search me-2"></i>
+                        Filtrar
+                    </button>
+                    <a href="{% url 'scanner:scan_historico' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-2"></i>
+                        Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Ações -->
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <a href="{% url 'scanner:scan' %}" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i>
+                Novo Scanner
+            </a>
+        </div>
+        <div class="col-md-6 text-end">
+            {% if equipamentos %}
+                <button class="btn btn-outline-primary" onclick="exportarCSV()">
+                    <i class="fas fa-download me-2"></i>
+                    Exportar CSV
+                </button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Tabela de Equipamentos -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-list me-2"></i>
+                Equipamentos Registrados
+                {% if equipamentos %}
+                    <span class="badge bg-light text-dark ms-2">{{ equipamentos.paginator.count }} itens</span>
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if equipamentos %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Código</th>
+                                <th>Tipo</th>
+                                <th>Data/Hora</th>
+                                <th>Peso Líquido</th>
+                                <th>Peso Bruto</th>
+                                <th>Medidas</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for equipamento in equipamentos %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary fs-6">{{ equipamento.codigo }}</span>
+                                    </td>
+                                    <td>
+                                        {% if equipamento.tipo_equipamento == 'guardian' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-shield-alt me-1"></i>
+                                                Guardian
+                                            </span>
+                                        {% elif equipamento.tipo_equipamento == 'sensor_porta' %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-door-open me-1"></i>
+                                                Sensor Porta
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-microchip me-1"></i>
+                                                Tetis
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {{ equipamento.data_recebido|date:"d/m/Y H:i" }}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        {% if equipamento.peso_liquido %}
+                                            {{ equipamento.peso_liquido }} kg
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if equipamento.peso_bruto %}
+                                            {{ equipamento.peso_bruto }} kg
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if equipamento.medidas_caixa %}
+                                            <small>{{ equipamento.medidas_caixa }}</small>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            {% if equipamento.codigo in status_por_codigo %}
+                                                {{ status_por_codigo.equipamento.codigo }}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary btn-detalhes" 
+                                                data-codigo="{{ equipamento.codigo }}"
+                                                data-tipo="{{ equipamento.get_tipo_equipamento_display }}"
+                                                data-data="{{ equipamento.data_recebido|date:'d/m/Y H:i' }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginação -->
+                {% if equipamentos.has_other_pages %}
+                    <div class="card-footer">
+                        <nav aria-label="Paginação dos equipamentos">
+                            <ul class="pagination justify-content-center mb-0">
+                                {% if equipamentos.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=1{% if codigo_filter %}&codigo={{ codigo_filter }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if data_inicio %}&data_inicio={{ data_inicio }}{% endif %}{% if data_fim %}&data_fim={{ data_fim }}{% endif %}">
+                                            <i class="fas fa-angle-double-left"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ equipamentos.previous_page_number }}{% if codigo_filter %}&codigo={{ codigo_filter }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if data_inicio %}&data_inicio={{ data_inicio }}{% endif %}{% if data_fim %}&data_fim={{ data_fim }}{% endif %}">
+                                            <i class="fas fa-angle-left"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+
+                                <li class="page-item active">
+                                    <span class="page-link">
+                                        Página {{ equipamentos.number }} de {{ equipamentos.paginator.num_pages }}
+                                    </span>
+                                </li>
+
+                                {% if equipamentos.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ equipamentos.next_page_number }}{% if codigo_filter %}&codigo={{ codigo_filter }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if data_inicio %}&data_inicio={{ data_inicio }}{% endif %}{% if data_fim %}&data_fim={{ data_fim }}{% endif %}">
+                                            <i class="fas fa-angle-right"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ equipamentos.paginator.num_pages }}{% if codigo_filter %}&codigo={{ codigo_filter }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}{% if data_inicio %}&data_inicio={{ data_inicio }}{% endif %}{% if data_fim %}&data_fim={{ data_fim }}{% endif %}">
+                                            <i class="fas fa-angle-double-right"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox text-muted" style="font-size: 4rem;"></i>
+                    <h4 class="mt-3 text-muted">Nenhum equipamento encontrado</h4>
+                    <p class="text-muted">
+                        {% if codigo_filter or tipo_filter or data_inicio or data_fim %}
+                            Tente ajustar os filtros ou 
+                            <a href="{% url 'scanner:scan_historico' %}">limpar todos os filtros</a>.
+                        {% else %}
+                            Comece escaneando alguns equipamentos!
+                        {% endif %}
+                    </p>
+                    <a href="{% url 'scanner:scan' %}" class="btn btn-primary">
+                        <i class="fas fa-qrcode me-2"></i>
+                        Ir para Scanner
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Detalhes -->
+<div class="modal fade" id="detalhesModal" tabindex="-1" aria-labelledby="detalhesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="detalhesModalLabel">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Detalhes do Equipamento
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-content">
+                    <!-- Será preenchido via JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Função para remover backdrop automaticamente
+function limparFundoCinza() {
+    document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+}
+
+// MutationObserver para remover backdrop automaticamente
+const observer = new MutationObserver(function(mutations) {
+    mutations.forEach(function(mutation) {
+        mutation.addedNodes.forEach(function(node) {
+            if (node.classList && node.classList.contains('modal-backdrop')) {
+                node.remove();
+            }
+        });
+    });
+});
+
+observer.observe(document.body, { childList: true });
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Remove qualquer backdrop ao carregar
+    limparFundoCinza();
+    
+    // Event listener para limpar backdrop ao fechar modal
+    const modalElement = document.getElementById('detalhesModal');
+    modalElement.addEventListener('hidden.bs.modal', function() {
+        limparFundoCinza();
+    });
+    modalElement.addEventListener('hide.bs.modal', function() {
+        limparFundoCinza();
+    });
+    
+    // Tecla ESC para fechar modal e limpar backdrop
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            setTimeout(limparFundoCinza, 100);
+        }
+    });
+    
+    // Event listener para botões de detalhes
+    document.querySelectorAll('.btn-detalhes').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const codigo = this.getAttribute('data-codigo');
+            const tipo = this.getAttribute('data-tipo');
+            const data = this.getAttribute('data-data');
+            
+            const content = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Código:</strong><br>
+                        <span class="badge bg-secondary fs-6">${codigo}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Tipo:</strong><br>
+                        ${tipo}
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <strong>Data de Registro:</strong><br>
+                        <small class="text-muted">${data}</small>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('modal-content').innerHTML = content;
+            const modal = new bootstrap.Modal(document.getElementById('detalhesModal'), {
+                backdrop: false,
+                keyboard: true
+            });
+            modal.show();
+        });
+    });
+});
+
+function exportarCSV() {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', 'csv');
+    window.location.href = '?' + params.toString();
+}
+</script>
+
+<style>
+/* Remove o backdrop cinza dos modais */
+.modal-backdrop,
+.modal-backdrop.fade,
+.modal-backdrop.show,
+.modal-backdrop.fade.show { 
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    background: none !important;
+}
+
+/* Garante que o body não tenha overlay quando modal aberto */
+body.modal-open {
+    overflow: auto !important;
+    padding-right: 0 !important;
+}
+
+/* Remove qualquer overlay residual */
+body::before,
+body::after {
+    display: none !important;
+}
+
+/* Garante textos visíveis nos modais */
+.modal .modal-body,
+.modal .modal-body p,
+.modal .modal-body span,
+.modal .modal-body div,
+.modal .modal-body h1,
+.modal .modal-body h2,
+.modal .modal-body h3,
+.modal .modal-body h4,
+.modal .modal-body h5,
+.modal .modal-body h6,
+.modal .modal-footer,
+.modal .modal-footer p,
+.modal .modal-footer span,
+.modal .modal-footer div,
+.modal .modal-body strong {
+    color: #ffffff !important;
+}
+
+/* Texto do modal header em branco */
+.modal .modal-header,
+.modal .modal-header h5,
+.modal .modal-header .modal-title {
+    color: #ffffff !important;
+}
+
+/* Garantir que elementos específicos sejam visíveis */
+.modal .row,
+.modal .col-md-6,
+.modal .col-12 {
+    color: #ffffff !important;
+}
+
+/* Badge no modal */
+.modal .badge {
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+}
+
+/* Garantir visibilidade de textos específicos no modal */
+.modal h5,
+.modal h4,
+.modal h3,
+.modal h2,
+.modal h1 {
+    color: #ffffff !important;
+}
+
+/* Botões de fechar modais */
+.modal .btn-close {
+    filter: invert(1) !important;
+}
+
+/* Tags hr no modal */
+.modal hr {
+    border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Small text no modal */
+.modal small,
+.modal .text-muted {
+    color: #e5e7eb !important;
+}
+
+/* === TEXTOS DA PÁGINA PRINCIPAL === */
+
+/* Subtitle/lead text em branco */
+.lead.text-muted {
+    color: #ffffff !important;
+}
+
+/* Todos os text-muted em branco */
+.text-muted {
+    color: #d1d5db !important;
+}
+
+/* Badge bg-light com texto escuro para contraste */
+.badge.bg-light {
+    background-color: #f8f9fa !important;
+    color: #111827 !important;
+}
+
+/* Garantir que textos em cards sejam visíveis */
+.card-body p,
+.card-body .text-muted {
+    color: #d1d5db !important;
+}
+
+/* Texto de tabelas */
+.table .text-muted {
+    color: #9ca3af !important;
+}
+
+/* Labels e textos de filtros */
+.form-label {
+    color: #f3f4f6 !important;
+}
+
+/* Card headers com bg-light */
+.card-header.bg-light {
+    background-color: rgba(248, 249, 250, 0.1) !important;
+    color: #ffffff !important;
+}
+
+.card-header.bg-light .card-title {
+    color: #ffffff !important;
+}
+
+/* Modal sem backdrop */
+.modal {
+    background: none !important;
+}
+
+/* Estilos customizados */
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.table th {
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge {
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+    
+    .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+}
+</style>
+
+<!-- DEBUG: Listas de códigos tratados e exibidos -->
+{% if codigos_tratados or codigos_exibidos %}
+<div style="background: #222; color: #ffe066; padding: 16px; margin-top: 32px; font-size: 0.95rem; border-radius: 8px;">
+  <strong>DEBUG:</strong><br>
+  <b>Códigos tratados (não devem aparecer):</b> <span style="color:#fff">{{ codigos_tratados|join:', ' }}</span><br>
+  <b>Códigos exibidos:</b> <span style="color:#fff">{{ codigos_exibidos|join:', ' }}</span>
+</div>
+{% endif %}
+{% endblock %}
