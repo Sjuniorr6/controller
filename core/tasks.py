@@ -10,6 +10,7 @@ from datetime import timedelta
 from celery import shared_task
 from django.db.models import Max
 from django.utils.timezone import now
+from django.core.cache import cache
 
 from core.models import EventoTratado
 
@@ -188,3 +189,132 @@ def verificar_alertas_equipamentos() -> None:
         logger.info("💾 %d novos eventos gravados", len(novos_eventos))
     else:
         logger.debug("🔍 Nenhuma mudança — nada gravado")
+
+
+# ---------------------------------------------------------------------------
+#  TASK PARA ATUALIZAR DADOS DO POWERBI
+# ---------------------------------------------------------------------------
+@shared_task
+def atualizar_dados_powerbi() -> None:
+    """
+    Atualiza os dados do PowerBI 4 vezes ao dia (a cada 6 horas)
+    Consolida dados das APIs T42 e AssetsControls COM geocoding
+    """
+    logger.info("🔄 Iniciando atualização dos dados PowerBI (com geocoding)")
+    
+    try:
+        # Importa aqui para evitar import circular
+        from .bi_api import consolidate_equipment_data
+        
+        # Consolida dados COM geocoding (pode demorar)
+        consolidated_data = consolidate_equipment_data(include_geocoding=True)
+        
+        # Salva no cache
+        cache.set('bi_dashboard_data', consolidated_data, 21600)  # 6 horas
+        cache.set('bi_dashboard_last_update', now().isoformat(), 21600)
+        
+        logger.info("✅ Dados PowerBI atualizados com sucesso: %d equipamentos", len(consolidated_data))
+        
+    except Exception as e:
+        logger.error("❌ Erro ao atualizar dados PowerBI: %s", str(e))
+
+
+# ---------------------------------------------------------------------------
+#  TASK PARA VERIFICAR GEOFENCING (SAÍDA DE FAZENDA E PARADO NO PORTO)
+# ---------------------------------------------------------------------------
+@shared_task
+def verificar_geofencing_equipamentos() -> None:
+    """
+    Verifica geofencing de todos os equipamentos:
+    - Detecta saídas de fazendas
+    - Detecta equipamentos parados no porto por mais de 10 dias
+    """
+    logger.info("🗺️ Iniciando verificação de geofencing")
+    
+    try:
+        from .geofencing_manager import processar_equipamento
+        
+        # Busca dados das APIs
+        equipamentos_processados = 0
+        alertas_criados = 0
+        
+        # Processa T42
+        try:
+            params = {
+                "commandname": "get_last_transmits",
+                "user": "wimc_u_nestle",
+                "pass": "Inte@20xx",
+                "format": "json"
+            }
+            
+            response = requests.get(
+                "https://mongol.brono.com/mongol/api.php",
+                params=params,
+                timeout=30
+            )
+            response.raise_for_status()
+            t42_data = response.json()
+            
+            if isinstance(t42_data, list):
+                for unit in t42_data:
+                    guid = str(unit.get('unitnumber', ''))
+                    nome = unit.get('unitname', 'Desconhecido')
+                    lat = unit.get('latitude')
+                    lng = unit.get('longitude')
+                    velocidade = unit.get('speed')
+                    
+                    if lat and lng:
+                        try:
+                            processar_equipamento(guid, nome, float(lat), float(lng), velocidade)
+                            equipamentos_processados += 1
+                        except Exception as e:
+                            logger.error(f"Erro processando {guid}: {e}")
+                            
+        except Exception as e:
+            logger.error(f"Erro ao buscar dados T42: {e}")
+        
+        # Processa AssetsControls
+        try:
+            guids = _carregar_guids()
+            if guids:
+                payload = {
+                    "FAction": "QueryLBSMonitorListByFGUIDs",
+                    "FTokenID": ASSETCONTROL_TOKEN_ID,
+                    "FGUIDs": ",".join(guids),
+                    "FDateType": 2,
+                }
+                
+                response = requests.post(ASSETCONTROL_URL, json=payload, timeout=30)
+                response.raise_for_status()
+                data = response.json()
+                
+                if data.get("Result") == 200 and data.get("FObject"):
+                    for obj in data["FObject"]:
+                        guid = obj.get("FAssetID")
+                        nome = obj.get("FVehicleName", "Desconhecido")
+                        lat = obj.get("FLatitude")
+                        lng = obj.get("FLongitude")
+                        velocidade = obj.get("FSpeed")
+                        
+                        if guid and lat and lng:
+                            try:
+                                processar_equipamento(guid, nome, float(lat), float(lng), velocidade)
+                                equipamentos_processados += 1
+                            except Exception as e:
+                                logger.error(f"Erro processando {guid}: {e}")
+                                
+        except Exception as e:
+            logger.error(f"Erro ao buscar dados AssetsControls: {e}")
+        
+        # Estatísticas
+        from .geofencing_manager import obter_alertas_ativos
+        estatisticas = obter_alertas_ativos()
+        
+        logger.info(
+            f"✅ Geofencing verificado: {equipamentos_processados} equipamentos processados | "
+            f"{estatisticas['total']} alertas ativos "
+            f"({estatisticas['saidas_fazenda']} saídas, {estatisticas['parados_porto']} parados)"
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao verificar geofencing: {e}")
