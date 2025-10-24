@@ -1,1290 +1,1557 @@
-{% extends "base.html" %}
-
-{% block title %}Mapa - Minha Plataforma{% endblock %}
-
+{% extends "base.html" %} {% block title %}Mapa - Minha Plataforma{% endblock %}
 {% block content %}
 <div class="container-fluid vh-100 d-flex flex-column bg-light">
-    
-    <!-- FILTROS NO TOPO -->
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="card p-3 shadow-sm">
-                <div class="row g-3 align-items-center">
-                    
-                    <!-- Campo de busca -->
-                    <div class="col-12 col-md-6">
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="text" id="searchInput" class="form-control" placeholder="Buscar equipamento por ID..." onkeyup="filtrarEquipamentosComDebounce()" onchange="filtrarEquipamentosComDebounce()">
-                            <button class="btn btn-primary" onclick="filtrarEquipamentos()">Buscar</button>
-                            <button class="btn btn-success" id="btnHistorico" onclick="gerarHistoricoPDF()" style="display: none;">
-                                <i class="fas fa-file-pdf me-2"></i>
-                                Histórico PDF
-                            </button>
-                        </div>
-                    </div>
-
-                </div>
+  <!-- FILTROS NO TOPO -->
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card p-3 shadow-sm">
+        <div class="row g-3 align-items-center">
+          <!-- Campo de busca -->
+          <div class="col-12 col-md-6">
+            <div class="input-group">
+              <span class="input-group-text"
+                ><i class="fas fa-search"></i
+              ></span>
+              <input
+                type="text"
+                id="searchInput"
+                class="form-control"
+                placeholder="Buscar equipamento por ID..."
+                onkeyup="filtrarEquipamentosComDebounce()"
+                onchange="filtrarEquipamentosComDebounce()"
+              />
+              <button class="btn btn-primary" onclick="filtrarEquipamentos()">
+                Buscar
+              </button>
+              <button
+                class="btn btn-success"
+                id="btnHistorico"
+                onclick="gerarHistoricoPDF()"
+                style="display: none"
+              >
+                <i class="fas fa-file-pdf me-2"></i>
+                Histórico PDF
+              </button>
             </div>
-        </div>
-    </div>
-
-    <!-- MAPA -->
-    <div class="row" style="margin-bottom:0;">
-        <div class="col-12" style="padding-bottom:0;">
-            <div style="height: 60vh; border-radius:0; margin-bottom:0; box-shadow:none; padding-bottom:0;">
-                <div id="map" class="w-100 h-100" style="border-radius:0;"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- TABELA DE RESULTADOS (embaixo do mapa) -->
-    <div class="row" style="margin-top:0;">
-        <div class="col-12" style="padding-top:0;">
-            <div id="resultadosTabela" style="max-height: 35vh; overflow-y: auto; border-radius:0; box-shadow:none; margin-top:0; padding-top:0;">
-                <div class="card-header bg-primary text-white py-2" style="border-radius:0; margin-top:0; padding-top:0;">
-                    <h6 class="mb-0"><i class="fas fa-list"></i> Informações do Equipamento</h6>
-                </div>
-                <div class="card-body p-0" style="margin-top:0; padding-top:0;">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped mb-0">
-                            <thead class="table-dark sticky-top">
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Bateria</th>
-                                    <th>Porta</th>
-                                    <th>Luminosidade</th>
-                                    <th>BL</th>
-                                    <th>Container</th>
-                                    <th>Destino</th>
-                                    <th>Lacre INN</th>
-                                    <th>Lacre</th>
-                                    <th>Localização</th>
-                                    <th>Última Atualização</th>
-                                </tr>
-                            </thead>
-                            <tbody id="resultadosTabelaBody">
-                                {% if fedex_equipamentos %}
-                                    {% for eq in fedex_equipamentos %}
-                                        <tr style="background: #ffe066;">
-                                            <td><strong>{{ eq.FAssetID }}</strong></td>
-                                            <td>{{ eq.FBattery|default:"-" }}%🔋</td>
-                                            <td>
-                                                {% if eq.FDoor == "1" %}Aberta
-                                                {% elif eq.FDoor == "0" %}Fechada
-                                                {% elif eq.FDoor == "-1" %}-{% else %}{{ eq.FDoor }}{% endif %}
-                                            </td>
-                                            <td>{{ eq.FExpandProto.FDesc|default:"-" }}</td>
-                                            <td class="bl-cell">N/A</td>
-                                            <td class="container-cell">N/A</td>
-                                            <td class="destino-cell">N/A</td>
-                                            <td class="lacre-inn-cell">N/A</td>
-                                            <td class="lacre-cell">N/A</td>
-                                            <td><small>{{ eq.FLatitude }}, {{ eq.FLongitude }}</small></td>
-                                            <td><small>{{ eq.FRecvTime|default:"-" }}</small></td>
-                                        </tr>
-                                    {% endfor %}
-                                {% endif %}
-                                <tr>
-                                    <td colspan="11" class="text-center text-muted">
-                                        <i class="fas fa-search"></i> Digite um ID e clique em "Buscar" para ver as informações
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL DE EDIÇÃO -->
-    <div class="modal fade" id="editEquipModal" tabindex="-1" aria-labelledby="editEquipModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="editEquipModalLabel">Editar Equipamento</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-          </div>
-          <div class="modal-body">
-            <!-- ALERTA BOOTSTRAP -->
-            <div id="modalAlert" style="display:none;"></div>
-            <form id="editEquipForm">
-              <div class="mb-2">
-                <label class="form-label">ID</label>
-                <input type="text" class="form-control" id="modalUnitId" readonly>
-              </div>
-              <div class="mb-2">
-                <label class="form-label">BL</label>
-                <input type="text" class="form-control" id="modalBL">
-              </div>
-              <div class="mb-2">
-                <label class="form-label">Container</label>
-                <input type="text" class="form-control" id="modalContainer">
-              </div>
-              <div class="mb-2">
-                <label class="form-label">Destino</label>
-                <input type="text" class="form-control" id="modalDestino">
-              </div>
-              <div class="mb-2">
-                <label class="form-label">Bateria</label>
-                <input type="text" class="form-control" id="modalBateria" readonly>
-              </div>
-              <div class="mb-2">
-                <label class="form-label">Porta</label>
-                <input type="text" class="form-control" id="modalPorta" readonly>
-              </div>
-              <div class="mb-2">
-                <label class="form-label">Luminosidade</label>
-                <input type="text" class="form-control" id="modalLuminosidade" readonly>
-              </div>
-              <div class="mb-2">
-                <label class="form-label">Lacre INN</label>
-                <input type="text" class="form-control" id="modalLacreInn">
-              </div>
-              <div class="mb-2">
-                <label class="form-label">Lacre</label>
-                <input type="text" class="form-control" id="modalLacre">
-              </div>
-              <div class="mb-2">
-                <label class="form-label">Localização</label>
-                <input type="text" class="form-control" id="modalLocalizacao" readonly>
-              </div>
-              <div class="mb-2">
-                <label class="form-label">Última Atualização</label>
-                <input type="text" class="form-control" id="modalAtualizacao" readonly>
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-            <button type="button" class="btn btn-info" onclick="visualizarHistorico()">
-                <i class="fas fa-history me-2"></i>Histórico
-            </button>
-            <button type="button" class="btn btn-primary" id="salvarEdicaoBtn">Salvar</button>
           </div>
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- MAPA -->
+  <div class="row" style="margin-bottom: 0">
+    <div class="col-12" style="padding-bottom: 0">
+      <div
+        style="
+          height: 60vh;
+          border-radius: 0;
+          margin-bottom: 0;
+          box-shadow: none;
+          padding-bottom: 0;
+        "
+      >
+        <div id="map" class="w-100 h-100" style="border-radius: 0"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABELA DE RESULTADOS (embaixo do mapa) -->
+  <div class="row" style="margin-top: 0">
+    <div class="col-12" style="padding-top: 0">
+      <div
+        id="resultadosTabela"
+        style="
+          max-height: 35vh;
+          overflow-y: auto;
+          border-radius: 0;
+          box-shadow: none;
+          margin-top: 0;
+          padding-top: 0;
+        "
+      >
+        <div
+          class="card-header bg-primary text-white py-2"
+          style="border-radius: 0; margin-top: 0; padding-top: 0"
+        >
+          <h6 class="mb-0">
+            <i class="fas fa-list"></i> Informações do Equipamento
+          </h6>
+        </div>
+        <div class="card-body p-0" style="margin-top: 0; padding-top: 0">
+          <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+              <thead class="table-dark sticky-top">
+                <tr>
+                  <th>ID</th>
+                  <th>Bateria</th>
+                  <th>Porta</th>
+                  <th>Luminosidade</th>
+                  <th>BL</th>
+                  <th>Container</th>
+                  <th>Destino</th>
+                  <th>Lacre INN</th>
+                  <th>Lacre</th>
+                  <th>Localização</th>
+                  <th>Última Atualização</th>
+                </tr>
+              </thead>
+              <tbody id="resultadosTabelaBody">
+                {% if fedex_equipamentos %} {% for eq in fedex_equipamentos %}
+                <tr style="background: #ffe066">
+                  <td><strong>{{ eq.FAssetID }}</strong></td>
+                  <td>{{ eq.FBattery|default:"-" }}%🔋</td>
+                  <td>
+                    {% if eq.FDoor == "1" %}Aberta {% elif eq.FDoor == "0"
+                    %}Fechada {% elif eq.FDoor == "-1" %}-{% else %}{{ eq.FDoor
+                    }}{% endif %}
+                  </td>
+                  <td>{{ eq.FExpandProto.FDesc|default:"-" }}</td>
+                  <td class="bl-cell">N/A</td>
+                  <td class="container-cell">N/A</td>
+                  <td class="destino-cell">N/A</td>
+                  <td class="lacre-inn-cell">N/A</td>
+                  <td class="lacre-cell">N/A</td>
+                  <td>
+                    <small>{{ eq.FLatitude }}, {{ eq.FLongitude }}</small>
+                  </td>
+                  <td><small>{{ eq.FRecvTime|default:"-" }}</small></td>
+                </tr>
+                {% endfor %} {% endif %}
+                <tr>
+                  <td colspan="11" class="text-center text-muted">
+                    <i class="fas fa-search"></i> Digite um ID e clique em
+                    "Buscar" para ver as informações
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE EDIÇÃO -->
+  <div
+    class="modal fade"
+    id="editEquipModal"
+    tabindex="-1"
+    aria-labelledby="editEquipModalLabel"
+    aria-hidden="true"
+  >
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editEquipModalLabel">
+            Editar Equipamento
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Fechar"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <!-- ALERTA BOOTSTRAP -->
+          <div id="modalAlert" style="display: none"></div>
+          <form id="editEquipForm">
+            <div class="mb-2">
+              <label class="form-label">ID</label>
+              <input
+                type="text"
+                class="form-control"
+                id="modalUnitId"
+                readonly
+              />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">BL</label>
+              <input type="text" class="form-control" id="modalBL" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Container</label>
+              <input type="text" class="form-control" id="modalContainer" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Destino</label>
+              <select class="form-select" id="modalDestino">
+                <option value="MOLENBERGNATIE">MOLENBERGNATIE</option>
+                <option value="MASIQUES">MASIQUES</option>
+                <option value="AVENCHES">AVENCHES</option>
+                <option value="BREMEN">BREMEN</option>
+                <option value="BREMEN PORT">BREMEN PORT</option>
+                <option value="ROMONT">ROMONT</option>
+              </select>
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Bateria</label>
+              <input
+                type="text"
+                class="form-control"
+                id="modalBateria"
+                readonly
+              />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Porta</label>
+              <input
+                type="text"
+                class="form-control"
+                id="modalPorta"
+                readonly
+              />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Luminosidade</label>
+              <input
+                type="text"
+                class="form-control"
+                id="modalLuminosidade"
+                readonly
+              />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Lacre INN</label>
+              <input type="text" class="form-control" id="modalLacreInn" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Lacre</label>
+              <input type="text" class="form-control" id="modalLacre" />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Localização</label>
+              <input
+                type="text"
+                class="form-control"
+                id="modalLocalizacao"
+                readonly
+              />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">Última Atualização</label>
+              <input
+                type="text"
+                class="form-control"
+                id="modalAtualizacao"
+                readonly
+              />
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Fechar
+          </button>
+          <button
+            type="button"
+            class="btn btn-info"
+            onclick="visualizarHistorico()"
+          >
+            <i class="fas fa-history me-2"></i>Histórico
+          </button>
+          <button type="button" class="btn btn-primary" id="salvarEdicaoBtn">
+            Salvar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ESTILO ADICIONAL -->
 <style>
-    body {
-        background-color: #dbdde4;
+  body {
+    background-color: #dbdde4;
+  }
+
+  .input-group-text {
+    background-color: #ddd;
+  }
+
+  /* Campo de busca que ocupa o resto do espaço */
+  .search-input-field {
+    flex: 1;
+    min-width: 500px;
+    font-size: 1.2rem;
+    padding: 1rem 1.5rem;
+    min-height: 55px;
+    color: white;
+    background-color: #2c3e50;
+    border: 1px solid #34495e;
+  }
+
+  .search-input-field:focus {
+    color: white;
+    background-color: #34495e;
+    border-color: #3498db;
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+  }
+
+  .search-input-field::placeholder {
+    color: #bdc3c7;
+    opacity: 0.9;
+  }
+
+  /* Ícone de busca que combina com o campo */
+  .search-icon {
+    background-color: #34495e;
+    border: 1px solid #34495e;
+    color: white;
+    font-size: 1.2rem;
+    padding: 1rem 1.5rem;
+    min-height: 55px;
+  }
+
+  /* Estilos para a tabela de resultados */
+  #resultadosTabela,
+  #map {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  #resultadosTabela .table {
+    font-size: 0.8rem;
+    margin-bottom: 0;
+  }
+
+  #resultadosTabela .table thead th {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 8px 4px;
+    border-bottom: 2px solid #dee2e6;
+  }
+
+  #resultadosTabela .table tbody td {
+    padding: 6px 4px;
+    vertical-align: middle;
+  }
+
+  #resultadosTabela .table tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  #resultadosTabela .table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.1) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  #resultadosTabela .table tbody tr:active {
+    background-color: rgba(0, 123, 255, 0.2) !important;
+    transform: translateY(0);
+  }
+
+  .card-header {
+    border-bottom: none;
+    padding: 8px 15px;
+  }
+
+  .card-header h6 {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  /* Scroll personalizado para a tabela */
+  .table-responsive {
+    max-height: 150px;
+    overflow-y: auto;
+  }
+
+  /* Responsividade */
+  @media (max-width: 768px) {
+    .container-fluid {
+      padding: 0.5rem;
+    }
+
+    #map {
+      height: 50vh !important;
+    }
+
+    #resultadosTabela {
+      max-height: 40vh !important;
+    }
+
+    .table th,
+    .table td {
+      padding: 4px 2px;
+      font-size: 0.75rem;
+    }
+
+    .card-header h6 {
+      font-size: 0.8rem;
+    }
+
+    .input-group {
+      flex-direction: column;
+    }
+
+    .input-group .form-control,
+    .search-input-field {
+      border-radius: 8px 8px 0 0 !important;
+      margin-bottom: 1px;
+      min-height: 70px;
+      font-size: 1.3rem;
+      padding: 1.25rem 1.75rem;
+      color: white;
+      background-color: #2c3e50;
+      border: 1px solid #34495e;
+      flex: 1;
+      min-width: 100%;
+    }
+
+    .search-icon {
+      min-height: 70px;
+      font-size: 1.3rem;
+      padding: 1.25rem 1.75rem;
+      background-color: #34495e;
+      border: 1px solid #34495e;
+      color: white;
+    }
+
+    .input-group .btn {
+      border-radius: 0 0 8px 8px !important;
+      width: 100%;
+    }
+
+    /* Botão de histórico */
+    #btnHistorico {
+      margin-left: 5px;
     }
 
     .input-group-text {
-        background-color: #ddd;
+      border-radius: 8px 8px 0 0 !important;
     }
-    
-    /* Campo de busca que ocupa o resto do espaço */
-    .search-input-field {
-        flex: 1;
-        min-width: 500px;
-        font-size: 1.2rem;
-        padding: 1rem 1.5rem;
-        min-height: 55px;
-        color: white;
-        background-color: #2c3e50;
-        border: 1px solid #34495e;
-    }
-    
-    .search-input-field:focus {
-        color: white;
-        background-color: #34495e;
-        border-color: #3498db;
-        box-shadow: 0 0 0 0.2rem rgba(52,152,219,0.25);
-    }
-    
-    .search-input-field::placeholder {
-        color: #bdc3c7;
-        opacity: 0.9;
-    }
-    
-    /* Ícone de busca que combina com o campo */
-    .search-icon {
-        background-color: #34495e;
-        border: 1px solid #34495e;
-        color: white;
-        font-size: 1.2rem;
-        padding: 1rem 1.5rem;
-        min-height: 55px;
-    }
-    
-    /* Estilos para a tabela de resultados */
-    #resultadosTabela, #map {
-        margin-top: 0 !important;
-        margin-bottom: 0 !important;
-        padding-top: 0 !important;
-        padding-bottom: 0 !important;
-        border-radius: 0 !important;
-        box-shadow: none !important;
-    }
-    
-    #resultadosTabela .table {
-        font-size: 0.8rem;
-        margin-bottom: 0;
-    }
-    
-    #resultadosTabela .table thead th {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        padding: 8px 4px;
-        border-bottom: 2px solid #dee2e6;
-    }
-    
-    #resultadosTabela .table tbody td {
-        padding: 6px 4px;
-        vertical-align: middle;
-    }
-    
-    #resultadosTabela .table tbody tr {
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-    
-    #resultadosTabela .table tbody tr:hover {
-        background-color: rgba(0,123,255,0.1) !important;
-        transform: translateY(-1px);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    #resultadosTabela .table tbody tr:active {
-        background-color: rgba(0,123,255,0.2) !important;
-        transform: translateY(0);
-    }
-    
-    .card-header {
-        border-bottom: none;
-        padding: 8px 15px;
-    }
-    
-    .card-header h6 {
-        font-size: 0.9rem;
-        font-weight: 600;
-    }
-    
-    /* Scroll personalizado para a tabela */
-    .table-responsive {
-        max-height: 150px;
-        overflow-y: auto;
+  }
+
+  @media (max-width: 576px) {
+    .container-fluid {
+      padding: 0.25rem;
     }
 
-    /* Responsividade */
-    @media (max-width: 768px) {
-        .container-fluid {
-            padding: 0.5rem;
-        }
-        
-        #map {
-            height: 50vh !important;
-        }
-        
-        #resultadosTabela {
-            max-height: 40vh !important;
-        }
-        
-        .table th, .table td {
-            padding: 4px 2px;
-            font-size: 0.75rem;
-        }
-        
-        .card-header h6 {
-            font-size: 0.8rem;
-        }
-        
-        .input-group {
-            flex-direction: column;
-        }
-        
-        .input-group .form-control,
-        .search-input-field {
-            border-radius: 8px 8px 0 0 !important;
-            margin-bottom: 1px;
-            min-height: 70px;
-            font-size: 1.3rem;
-            padding: 1.25rem 1.75rem;
-            color: white;
-            background-color: #2c3e50;
-            border: 1px solid #34495e;
-            flex: 1;
-            min-width: 100%;
-        }
-        
-        .search-icon {
-            min-height: 70px;
-            font-size: 1.3rem;
-            padding: 1.25rem 1.75rem;
-            background-color: #34495e;
-            border: 1px solid #34495e;
-            color: white;
-        }
-        
-        .input-group .btn {
-            border-radius: 0 0 8px 8px !important;
-            width: 100%;
-        }
-        
-        /* Botão de histórico */
-        #btnHistorico {
-            margin-left: 5px;
-        }
-        
-        .input-group-text {
-            border-radius: 8px 8px 0 0 !important;
-        }
+    #map {
+      height: 45vh !important;
     }
 
-    @media (max-width: 576px) {
-        .container-fluid {
-            padding: 0.25rem;
-        }
-        
-        #map {
-            height: 45vh !important;
-        }
-        
-        #resultadosTabela {
-            max-height: 45vh !important;
-        }
-        
-        .table th, .table td {
-            padding: 2px 1px;
-            font-size: 0.7rem;
-        }
-        
-        .btn {
-            padding: 0.5rem 0.75rem;
-            font-size: 0.8rem;
-        }
-        
-        .modal-dialog {
-            margin: 0.5rem;
-        }
-        
-        .card {
-            padding: 0.5rem !important;
-        }
-    }
-    
-    .table-responsive::-webkit-scrollbar {
-        width: 6px;
-    }
-    
-    .table-responsive::-webkit-scrollbar-track {
-        background: #f1f1f1;
-    }
-    
-    .table-responsive::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
-        border-radius: 3px;
-    }
-    
-    .table-responsive::-webkit-scrollbar-thumb:hover {
-        background: #a8a8a8;
+    #resultadosTabela {
+      max-height: 45vh !important;
     }
 
-    /* Remove o backdrop cinza dos modais - TODAS as variações */
-    .modal-backdrop,
-    .modal-backdrop.fade,
-    .modal-backdrop.show,
-    .modal-backdrop.fade.show { 
-        display: none !important;
-        opacity: 0 !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
+    .table th,
+    .table td {
+      padding: 2px 1px;
+      font-size: 0.7rem;
     }
-    
-    /* Garante que o body não tenha overlay quando modal aberto */
-    body.modal-open {
-        overflow: auto !important;
-        padding-right: 0 !important;
+
+    .btn {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
     }
-    
-    /* Remove qualquer overlay residual */
-    body::before,
-    body::after {
-        display: none !important;
-    }
-    
-    /* Modal dinâmico personalizado */
-    .modal.show {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        display: flex !important;
-        align-items: center;
-        justify-content: center;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 1050;
-        padding: 1rem;
-    }
-    
+
     .modal-dialog {
-        position: relative;
-        margin: 0;
-        max-width: 600px;
-        width: 95vw;
-        max-height: 90vh;
-        animation: modalSlideIn 0.3s ease-out;
+      margin: 0.5rem;
     }
-    
+
+    .card {
+      padding: 0.5rem !important;
+    }
+  }
+
+  .table-responsive::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+
+  .table-responsive::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+  }
+
+  .table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+  }
+
+  /* Remove o backdrop cinza dos modais - TODAS as variações */
+  .modal-backdrop,
+  .modal-backdrop.fade,
+  .modal-backdrop.show,
+  .modal-backdrop.fade.show {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
+  /* Garante que o body não tenha overlay quando modal aberto */
+  body.modal-open {
+    overflow: auto !important;
+    padding-right: 0 !important;
+  }
+
+  /* Remove qualquer overlay residual */
+  body::before,
+  body::after {
+    display: none !important;
+  }
+
+  /* Modal dinâmico personalizado */
+  .modal.show {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1050;
+    padding: 1rem;
+  }
+
+  .modal-dialog {
+    position: relative;
+    margin: 0;
+    max-width: 600px;
+    width: 95vw;
+    max-height: 90vh;
+    animation: modalSlideIn 0.3s ease-out;
+  }
+
+  .modal-content {
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    border: none;
+    background-color: #1e293b;
+    color: white;
+  }
+
+  .modal-header {
+    background-color: #334155;
+    border-bottom: 1px solid #475569;
+    color: white;
+  }
+
+  .modal-title {
+    color: white !important;
+  }
+
+  .modal-body {
+    background-color: #1e293b;
+    color: white;
+  }
+
+  .modal-body label {
+    color: white !important;
+    font-weight: 600;
+  }
+
+  .modal-body .form-control {
+    background-color: #334155;
+    border: 1px solid #475569;
+    color: white;
+  }
+
+  .modal-body .form-control:focus {
+    background-color: #475569;
+    border-color: #6366f1;
+    color: white;
+    box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+  }
+
+  .modal-footer {
+    background-color: #334155;
+    border-top: 1px solid #475569;
+  }
+
+  /* Animação de entrada do modal */
+  @keyframes modalSlideIn {
+    0% {
+      opacity: 0;
+      transform: scale(0.8) translateY(-20px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* Responsividade para mobile */
+  @media (max-width: 576px) {
+    .modal-dialog {
+      max-width: 95vw;
+      max-height: 95vh;
+    }
+
     .modal-content {
-        max-height: 85vh;
-        overflow-y: auto;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-        border-radius: 12px;
-        border: none;
-        background-color: #1e293b;
-        color: white;
+      max-height: 90vh;
     }
-    
-    .modal-header {
-        background-color: #334155;
-        border-bottom: 1px solid #475569;
-        color: white;
+
+    .modal.show {
+      padding: 0.5rem;
     }
-    
-    .modal-title {
-        color: white !important;
+  }
+
+  /* Estilos para alertas melhorados */
+  .alert {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+  }
+
+  .alert-success {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    color: #155724;
+    border-left: 4px solid #28a745;
+  }
+
+  .alert-danger {
+    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+  }
+
+  .alert-warning {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    color: #856404;
+    border-left: 4px solid #ffc107;
+  }
+
+  .alert-info {
+    background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    color: #0c5460;
+    border-left: 4px solid #17a2b8;
+  }
+
+  /* Estilos para histórico */
+  #historicoModal .modal-content {
+    background-color: #1e293b;
+    color: white;
+  }
+
+  #historicoModal .modal-header {
+    background-color: #334155;
+    border-bottom: 1px solid #475569;
+  }
+
+  #historicoModal .modal-body {
+    background-color: #1e293b;
+  }
+
+  #historicoModal .table {
+    color: white;
+    background-color: #334155;
+  }
+
+  #historicoModal .table thead th {
+    background-color: #475569;
+    border-color: #64748b;
+    color: white;
+  }
+
+  #historicoModal .table tbody td {
+    border-color: #475569;
+  }
+
+  #historicoModal .table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  #historicoModal .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  /* Animação para destaque de linha atualizada */
+  .table-success {
+    animation: highlightRow 3s ease-in-out;
+  }
+
+  @keyframes highlightRow {
+    0% {
+      background-color: #d4edda;
     }
-    
-    .modal-body {
-        background-color: #1e293b;
-        color: white;
+    50% {
+      background-color: #c3e6cb;
     }
-    
-    .modal-body label {
-        color: white !important;
-        font-weight: 600;
+    100% {
+      background-color: transparent;
     }
-    
-    .modal-body .form-control {
-        background-color: #334155;
-        border: 1px solid #475569;
-        color: white;
+  }
+
+  /* Estilos para botões de loading */
+  .btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .btn .fa-spinner {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
     }
-    
-    .modal-body .form-control:focus {
-        background-color: #475569;
-        border-color: #6366f1;
-        color: white;
-        box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+    100% {
+      transform: rotate(360deg);
     }
-    
-    .modal-footer {
-        background-color: #334155;
-        border-top: 1px solid #475569;
+  }
+
+  /* Estilos para cercas geográficas */
+  .leaflet-popup-content {
+    font-size: 12px;
+  }
+
+  .leaflet-popup-content strong {
+    color: #333;
+  }
+
+  .leaflet-popup-content small {
+    color: #666;
+  }
+
+  /* Estilos para a legenda */
+  .info.legend,
+  .info.legend * {
+    color: #111 !important;
+  }
+
+  .info.legend h6 {
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+  }
+
+  /* Animação para cercas */
+  .cerca-pulse {
+    animation: cercaPulse 2s infinite;
+  }
+
+  @keyframes cercaPulse {
+    0% {
+      opacity: 0.3;
     }
-    
-    /* Animação de entrada do modal */
-    @keyframes modalSlideIn {
-        0% {
-            opacity: 0;
-            transform: scale(0.8) translateY(-20px);
-        }
-        100% {
-            opacity: 1;
-            transform: scale(1) translateY(0);
-        }
+    50% {
+      opacity: 0.8;
     }
-    
-    /* Responsividade para mobile */
-    @media (max-width: 576px) {
-        .modal-dialog {
-            max-width: 95vw;
-            max-height: 95vh;
-        }
-        
-        .modal-content {
-            max-height: 90vh;
-        }
-        
-        .modal.show {
-            padding: 0.5rem;
-        }
+    100% {
+      opacity: 0.3;
     }
-    
-    /* Estilos para alertas melhorados */
-    .alert {
-        border-radius: 8px;
-        border: none;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        margin-bottom: 1rem;
-    }
-    
-    .alert-success {
-        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-        color: #155724;
-        border-left: 4px solid #28a745;
-    }
-    
-    .alert-danger {
-        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-        color: #721c24;
-        border-left: 4px solid #dc3545;
-    }
-    
-    .alert-warning {
-        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-        color: #856404;
-        border-left: 4px solid #ffc107;
-    }
-    
-    .alert-info {
-        background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
-        color: #0c5460;
-        border-left: 4px solid #17a2b8;
-    }
-    
-    /* Estilos para histórico */
-    #historicoModal .modal-content {
-        background-color: #1e293b;
-        color: white;
-    }
-    
-    #historicoModal .modal-header {
-        background-color: #334155;
-        border-bottom: 1px solid #475569;
-    }
-    
-    #historicoModal .modal-body {
-        background-color: #1e293b;
-    }
-    
-    #historicoModal .table {
-        color: white;
-        background-color: #334155;
-    }
-    
-    #historicoModal .table thead th {
-        background-color: #475569;
-        border-color: #64748b;
-        color: white;
-    }
-    
-    #historicoModal .table tbody td {
-        border-color: #475569;
-    }
-    
-    #historicoModal .table-striped tbody tr:nth-of-type(odd) {
-        background-color: rgba(255,255,255,0.05);
-    }
-    
-    #historicoModal .badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-    }
-    
-    /* Animação para destaque de linha atualizada */
-    .table-success {
-        animation: highlightRow 3s ease-in-out;
-    }
-    
-    @keyframes highlightRow {
-        0% { background-color: #d4edda; }
-        50% { background-color: #c3e6cb; }
-        100% { background-color: transparent; }
-    }
-    
-    /* Estilos para botões de loading */
-    .btn:disabled {
-        opacity: 0.7;
-        cursor: not-allowed;
-    }
-    
-    .btn .fa-spinner {
-        animation: spin 1s linear infinite;
-    }
-    
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    /* Estilos para cercas geográficas */
-    .leaflet-popup-content {
-        font-size: 12px;
-    }
-    
-    .leaflet-popup-content strong {
-        color: #333;
-    }
-    
-    .leaflet-popup-content small {
-        color: #666;
-    }
-    
-    /* Estilos para a legenda */
-    .info.legend,
-    .info.legend * {
-        color: #111 !important;
-    }
-    
-    .info.legend h6 {
-        border-bottom: 1px solid #ddd;
-        padding-bottom: 5px;
-        margin-bottom: 10px;
-    }
-    
-    /* Animação para cercas */
-    .cerca-pulse {
-        animation: cercaPulse 2s infinite;
-    }
-    
-    @keyframes cercaPulse {
-        0% { opacity: 0.3; }
-        50% { opacity: 0.8; }
-        100% { opacity: 0.3; }
-    }
+  }
 </style>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"
+/>
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 
-    <script>
-        console.log("🚀 SCRIPT CARREGADO!");
-    
-        // Variáveis globais
-        let map;
-        let markers = {};
-        let t42Data = [];
-        let assetsControlsData = [];
-        let camposBanco = {};
-        
-        // Cache inteligente
-        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
-        let t42LastLoadTime = 0;
-        let assetsControlsLastLoadTime = 0;
-        
-        // IDs dos equipamentos extras (AssetsControls)
-        const IDS_EQUIPAMENTOS_FED_EX = ['837303000312', '830408000586']; // Substitua pelos IDs reais
+<script>
+  console.log("🚀 SCRIPT CARREGADO!");
 
-        const usuarioFedex = "{{ user.username|escapejs }}" === "teste.fedex";
-        let fedexMarkers = {};
-        
-        // Inicialização do mapa
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("📄 PÁGINA CARREGADA!");
-            
-            // Inicializa o mapa
-            map = L.map('map').setView([-15.7801, -47.9292], 4);
-            
-            // Adiciona o tile layer
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-            
-            console.log("✅ Mapa inicializado com sucesso");
-    
-            // Testa se o campo de busca existe
-            const searchInput = document.getElementById("searchInput");
-            if (searchInput) {
-                console.log("✅ Campo de busca encontrado");
-            } else {
-                console.log("❌ Campo de busca NÃO encontrado");
-            }
-            
-            // Testa se o botão existe
-            const searchButton = document.querySelector('button[onclick="filtrarEquipamentos()"]');
-            if (searchButton) {
-                console.log("✅ Botão de busca encontrado");
-            } else {
-                console.log("❌ Botão de busca NÃO encontrado");
-        }
-        });
-    
-        // Função para destacar equipamento na tabela
-        function destacarEquipamentoNaTabela(unitId) {
-            // Remove destaque anterior
-            const linhas = document.querySelectorAll('#resultadosTabelaBody tr');
-            linhas.forEach(linha => {
-                linha.classList.remove('table-warning', 'table-info');
-                linha.style.backgroundColor = '';
-            });
-            
-            // Encontra e destaca a linha correspondente
-            linhas.forEach(linha => {
-                const idCell = linha.querySelector('td:first-child');
-                if (idCell && idCell.textContent.trim() === unitId) {
-                    linha.classList.add('table-warning');
-                    linha.style.backgroundColor = '#fff3cd';
-                    linha.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    return;
-                }
-            });
-        }
+  // Variáveis globais
+  let map;
+  let markers = {};
+  let t42Data = [];
+  let assetsControlsData = [];
+  let camposBanco = {};
 
-        // Função para destacar equipamento no mapa
-        function destacarEquipamentoNoMapa(unitId) {
-            // Remove destaque anterior dos marcadores
-            Object.values(markers).forEach(marker => {
-                marker.setIcon(L.icon({
-                    iconUrl: 'https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/images/marker-icon.png',
-                    iconSize: [25, 41],
-                    iconAnchor: [12, 41],
-                    popupAnchor: [1, -34]
-                }));
-            });
-            
-            // Destaca o marcador correspondente
-            if (markers[unitId]) {
-                markers[unitId].setIcon(L.icon({
-                    iconUrl: 'https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/images/marker-icon.png',
-                    iconSize: [35, 51], // Marcador maior
-                    iconAnchor: [17, 51],
-                    popupAnchor: [1, -44]
-                }));
-                
-                // Centraliza o mapa no equipamento
-                map.setView([markers[unitId].getLatLng().lat, markers[unitId].getLatLng().lng], 12);
-                
-                // Abre o popup
-                markers[unitId].openPopup();
-            }
-        }
+  // Cache inteligente
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+  let t42LastLoadTime = 0;
+  let assetsControlsLastLoadTime = 0;
 
-        // Função para filtrar os equipamentos
-        function filtrarEquipamentos() {
-            console.log("🚀 FUNÇÃO FILTRAR EQUIPAMENTOS CHAMADA!");
+  // IDs dos equipamentos extras (AssetsControls)
+  const IDS_EQUIPAMENTOS_FED_EX = ["837303000312", "830408000586"]; // Substitua pelos IDs reais
 
-            let searchInput = document.getElementById("searchInput").value.trim();
-            console.log("Termo de busca:", searchInput);
-            
-            if (searchInput === "") {
-                console.log("Campo de busca vazio");
-                return;
-            }
-            
-            // Detecta qual API usar baseado no padrão do ID
-            const isAssetsControlsId = /^\d{12}$/.test(searchInput);
-            console.log("ID detectado como:", isAssetsControlsId ? "AssetsControls" : "T42");
-            
-            // Mostra/esconde botão de histórico baseado no tipo
-            const btnHistorico = document.getElementById('btnHistorico');
-            if (isAssetsControlsId) {
-                btnHistorico.style.display = 'none'; // Não mostra para AssetsControls
-            } else {
-                btnHistorico.style.display = 'inline-block'; // Mostra para T42
-            }
-            
-            // Carrega apenas a API necessária
-            if (isAssetsControlsId) {
-                carregarAssetsControls();
-            } else {
-                carregarT42();
-            }
-        }
-    
-        // Função para carregar T42
-        function carregarT42() {
-            console.log("Carregando T42...");
-            showLoading("Carregando T42...");
-            
-            let searchInput = document.getElementById("searchInput").value.trim();
-            
-            fetch(`/api/get_t42_data/?id=${encodeURIComponent(searchInput)}`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log("Dados T42 recebidos:", data.length);
-                    
-                    // Filtra apenas o equipamento específico
-                    const equipamentoEncontrado = data.find(unit => 
-                        String(unit.unitnumber) === searchInput
-                    );
-                    
-                    if (equipamentoEncontrado) {
-                        console.log("Equipamento T42 encontrado:", equipamentoEncontrado);
-                        t42Data = [equipamentoEncontrado]; // Armazena apenas o encontrado
-                        t42LastLoadTime = Date.now();
-                        hideLoading();
-                        atualizarTabela([equipamentoEncontrado]);
-                        atualizarMapa([equipamentoEncontrado]);
-                        
-                        // Destaca o equipamento na tabela após atualizar
-                        setTimeout(() => {
-                            destacarEquipamentoNaTabela(equipamentoEncontrado.unitnumber);
-                        }, 100);
-                    } else {
-                        console.log("Equipamento não encontrado na T42");
-                        hideLoading();
-                        // Mostra mensagem de não encontrado
-                        document.getElementById("resultadosTabelaBody").innerHTML = `
+  const usuarioFedex = "{{ user.username|escapejs }}" === "teste.fedex";
+  let fedexMarkers = {};
+
+  // Inicialização do mapa
+  document.addEventListener("DOMContentLoaded", function () {
+    console.log("📄 PÁGINA CARREGADA!");
+
+    // Inicializa o mapa
+    map = L.map("map").setView([-15.7801, -47.9292], 4);
+
+    // Adiciona o tile layer
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+    }).addTo(map);
+
+    console.log("✅ Mapa inicializado com sucesso");
+
+    // Testa se o campo de busca existe
+    const searchInput = document.getElementById("searchInput");
+    if (searchInput) {
+      console.log("✅ Campo de busca encontrado");
+    } else {
+      console.log("❌ Campo de busca NÃO encontrado");
+    }
+
+    // Testa se o botão existe
+    const searchButton = document.querySelector(
+      'button[onclick="filtrarEquipamentos()"]'
+    );
+    if (searchButton) {
+      console.log("✅ Botão de busca encontrado");
+    } else {
+      console.log("❌ Botão de busca NÃO encontrado");
+    }
+  });
+
+  // Função para destacar equipamento na tabela
+  function destacarEquipamentoNaTabela(unitId) {
+    // Remove destaque anterior
+    const linhas = document.querySelectorAll("#resultadosTabelaBody tr");
+    linhas.forEach((linha) => {
+      linha.classList.remove("table-warning", "table-info");
+      linha.style.backgroundColor = "";
+    });
+
+    // Encontra e destaca a linha correspondente
+    linhas.forEach((linha) => {
+      const idCell = linha.querySelector("td:first-child");
+      if (idCell && idCell.textContent.trim() === unitId) {
+        linha.classList.add("table-warning");
+        linha.style.backgroundColor = "#fff3cd";
+        linha.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+    });
+  }
+
+  // Função para destacar equipamento no mapa
+  function destacarEquipamentoNoMapa(unitId) {
+    // Remove destaque anterior dos marcadores
+    Object.values(markers).forEach((marker) => {
+      marker.setIcon(
+        L.icon({
+          iconUrl:
+            "https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/images/marker-icon.png",
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+        })
+      );
+    });
+
+    // Destaca o marcador correspondente
+    if (markers[unitId]) {
+      markers[unitId].setIcon(
+        L.icon({
+          iconUrl:
+            "https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/images/marker-icon.png",
+          iconSize: [35, 51], // Marcador maior
+          iconAnchor: [17, 51],
+          popupAnchor: [1, -44],
+        })
+      );
+
+      // Centraliza o mapa no equipamento
+      map.setView(
+        [markers[unitId].getLatLng().lat, markers[unitId].getLatLng().lng],
+        12
+      );
+
+      // Abre o popup
+      markers[unitId].openPopup();
+    }
+  }
+
+  // Função para filtrar os equipamentos
+  function filtrarEquipamentos() {
+    console.log("🚀 FUNÇÃO FILTRAR EQUIPAMENTOS CHAMADA!");
+
+    let searchInput = document.getElementById("searchInput").value.trim();
+    console.log("Termo de busca:", searchInput);
+
+    if (searchInput === "") {
+      console.log("Campo de busca vazio");
+      return;
+    }
+
+    // Detecta qual API usar baseado no padrão do ID
+    const isAssetsControlsId = /^\d{12}$/.test(searchInput);
+    console.log(
+      "ID detectado como:",
+      isAssetsControlsId ? "AssetsControls" : "T42"
+    );
+
+    // Mostra/esconde botão de histórico baseado no tipo
+    const btnHistorico = document.getElementById("btnHistorico");
+    if (isAssetsControlsId) {
+      btnHistorico.style.display = "none"; // Não mostra para AssetsControls
+    } else {
+      btnHistorico.style.display = "inline-block"; // Mostra para T42
+    }
+
+    // Carrega apenas a API necessária
+    if (isAssetsControlsId) {
+      carregarAssetsControls();
+    } else {
+      carregarT42();
+    }
+  }
+
+  // Função para carregar T42
+  function carregarT42() {
+    console.log("Carregando T42...");
+    showLoading("Carregando T42...");
+
+    let searchInput = document.getElementById("searchInput").value.trim();
+
+    fetch(`/api/get_t42_data/?id=${encodeURIComponent(searchInput)}`)
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Dados T42 recebidos:", data.length);
+
+        // Filtra apenas o equipamento específico
+        const equipamentoEncontrado = data.find(
+          (unit) => String(unit.unitnumber) === searchInput
+        );
+
+        if (equipamentoEncontrado) {
+          console.log("Equipamento T42 encontrado:", equipamentoEncontrado);
+          t42Data = [equipamentoEncontrado]; // Armazena apenas o encontrado
+          t42LastLoadTime = Date.now();
+          hideLoading();
+          atualizarTabela([equipamentoEncontrado]);
+          atualizarMapa([equipamentoEncontrado]);
+
+          // Destaca o equipamento na tabela após atualizar
+          setTimeout(() => {
+            destacarEquipamentoNaTabela(equipamentoEncontrado.unitnumber);
+          }, 100);
+        } else {
+          console.log("Equipamento não encontrado na T42");
+          hideLoading();
+          // Mostra mensagem de não encontrado
+          document.getElementById("resultadosTabelaBody").innerHTML = `
                             <tr>
                                 <td colspan="11" class="text-center text-muted">
                                     <i class="fas fa-search"></i> Equipamento ${searchInput} não encontrado na T42.
                                 </td>
                             </tr>
                         `;
-                    }
-                })
-                .catch(error => {
-                    console.error("Erro ao carregar T42:", error);
-                    hideLoading();
-                    console.log("Erro ao carregar dados T42");
-                });
         }
-    
-        // Função para carregar AssetsControls
-        function carregarAssetsControls() {
-            console.log("Carregando AssetsControls...");
-            showLoading("Carregando AssetsControls...");
-        
-            // Busca direta por ID específico (mais rápido)
-            let searchInput = document.getElementById("searchInput").value.trim();
-            
-            fetch(`/api/get_assetscontrols_data/?id=${encodeURIComponent(searchInput)}`)
-                .then(resp => resp.json())
-                .then(data => {
-                    console.log("Fedex API data para", searchInput, data);
-                    
-                    // Filtra apenas o equipamento específico
-                    if (data && data.FObject && Array.isArray(data.FObject)) {
-                        const equipamentoEncontrado = data.FObject.find(item => 
-                            String(item.FAssetID || item.FVehicleName) === searchInput
-                        );
-                        
-                        if (equipamentoEncontrado) {
-                            const equipamentoProcessado = {
-                                unitnumber: equipamentoEncontrado.FAssetID || equipamentoEncontrado.FVehicleName || 'N/A',
-                                latitude: equipamentoEncontrado.FLatitude,
-                                longitude: equipamentoEncontrado.FLongitude,
-                                FRecvTime: equipamentoEncontrado.FRecvTime,
-                                FGPSTime: equipamentoEncontrado.FGPSTime,
-                                FBattery: equipamentoEncontrado.FBattery,
-                                FDoor: equipamentoEncontrado.FDoor,
-                                FExpandProto: equipamentoEncontrado.FExpandProto,
-                                BL: equipamentoEncontrado.BL || '',
-                                container: equipamentoEncontrado.container || '',
-                                destino: equipamentoEncontrado.destino || '',
-                                lacre_inn: equipamentoEncontrado.lacre_inn || '',
-                                lacre: equipamentoEncontrado.lacre || '',
-                                main_voltage: null,
-                                door: '0',
-                                light: '0',
-                            };
-                            
-                            console.log("Equipamento AssetsControls encontrado:", equipamentoProcessado);
-                            hideLoading();
-                            atualizarTabela([equipamentoProcessado]);
-                            atualizarMapa([equipamentoProcessado]);
-                            
-                            // Destaca o equipamento na tabela após atualizar
-                            setTimeout(() => {
-                                destacarEquipamentoNaTabela(equipamentoProcessado.unitnumber);
-                            }, 100);
-            } else {
-                            console.log("Equipamento não encontrado na AssetsControls");
-                            hideLoading();
-                            // Mostra mensagem de não encontrado
-                            document.getElementById("resultadosTabelaBody").innerHTML = `
+      })
+      .catch((error) => {
+        console.error("Erro ao carregar T42:", error);
+        hideLoading();
+        console.log("Erro ao carregar dados T42");
+      });
+  }
+
+  // Função para carregar AssetsControls
+  function carregarAssetsControls() {
+    console.log("Carregando AssetsControls...");
+    showLoading("Carregando AssetsControls...");
+
+    // Busca direta por ID específico (mais rápido)
+    let searchInput = document.getElementById("searchInput").value.trim();
+
+    fetch(`/api/get_assetscontrols_data/?id=${encodeURIComponent(searchInput)}`)
+      .then((resp) => resp.json())
+      .then((data) => {
+        console.log("Fedex API data para", searchInput, data);
+
+        // Filtra apenas o equipamento específico
+        if (data && data.FObject && Array.isArray(data.FObject)) {
+          const equipamentoEncontrado = data.FObject.find(
+            (item) => String(item.FAssetID || item.FVehicleName) === searchInput
+          );
+
+          if (equipamentoEncontrado) {
+            const equipamentoProcessado = {
+              unitnumber:
+                equipamentoEncontrado.FAssetID ||
+                equipamentoEncontrado.FVehicleName ||
+                "N/A",
+              latitude: equipamentoEncontrado.FLatitude,
+              longitude: equipamentoEncontrado.FLongitude,
+              FRecvTime: equipamentoEncontrado.FRecvTime,
+              FGPSTime: equipamentoEncontrado.FGPSTime,
+              FBattery: equipamentoEncontrado.FBattery,
+              FDoor: equipamentoEncontrado.FDoor,
+              FExpandProto: equipamentoEncontrado.FExpandProto,
+              BL: equipamentoEncontrado.BL || "",
+              container: equipamentoEncontrado.container || "",
+              destino: equipamentoEncontrado.destino || "",
+              lacre_inn: equipamentoEncontrado.lacre_inn || "",
+              lacre: equipamentoEncontrado.lacre || "",
+              main_voltage: null,
+              door: "0",
+              light: "0",
+            };
+
+            console.log(
+              "Equipamento AssetsControls encontrado:",
+              equipamentoProcessado
+            );
+            hideLoading();
+            atualizarTabela([equipamentoProcessado]);
+            atualizarMapa([equipamentoProcessado]);
+
+            // Destaca o equipamento na tabela após atualizar
+            setTimeout(() => {
+              destacarEquipamentoNaTabela(equipamentoProcessado.unitnumber);
+            }, 100);
+          } else {
+            console.log("Equipamento não encontrado na AssetsControls");
+            hideLoading();
+            // Mostra mensagem de não encontrado
+            document.getElementById("resultadosTabelaBody").innerHTML = `
                                 <tr>
                                     <td colspan="11" class="text-center text-muted">
                                         <i class="fas fa-search"></i> Equipamento ${searchInput} não encontrado na AssetsControls.
                                     </td>
                                 </tr>
                             `;
-                        }
-                    } else {
-                        console.log("Estrutura de dados AssetsControls inválida");
-                        hideLoading();
-                    }
-                    
-                    assetsControlsLastLoadTime = Date.now();
-                })
-                .catch(error => {
-                    console.error("Erro ao carregar AssetsControls:", error);
-                    hideLoading();
-                    console.log("Erro ao carregar dados AssetsControls");
-                });
+          }
+        } else {
+          console.log("Estrutura de dados AssetsControls inválida");
+          hideLoading();
         }
-        
-        // Função para atualizar tabela
-        function atualizarTabela(dados) {
-            const tabela = document.getElementById("resultadosTabela");
-            const tbody = document.getElementById("resultadosTabelaBody");
-            
-            console.log("Elemento tabela encontrado:", !!tabela);
-            console.log("Elemento tbody encontrado:", !!tbody);
-            
-            if (dados.length === 0) {
-                console.log("Nenhum dado - mostrando mensagem de busca");
-                tbody.innerHTML = `
+
+        assetsControlsLastLoadTime = Date.now();
+      })
+      .catch((error) => {
+        console.error("Erro ao carregar AssetsControls:", error);
+        hideLoading();
+        console.log("Erro ao carregar dados AssetsControls");
+      });
+  }
+
+  // Função para atualizar tabela
+  function atualizarTabela(dados) {
+    const tabela = document.getElementById("resultadosTabela");
+    const tbody = document.getElementById("resultadosTabelaBody");
+
+    console.log("Elemento tabela encontrado:", !!tabela);
+    console.log("Elemento tbody encontrado:", !!tbody);
+
+    if (dados.length === 0) {
+      console.log("Nenhum dado - mostrando mensagem de busca");
+      tbody.innerHTML = `
                     <tr>
                         <td colspan="11" class="text-center text-muted">
                             <i class="fas fa-search"></i> Nenhum equipamento encontrado. Tente outro ID.
                         </td>
                     </tr>
                 `;
-                return;
+      return;
+    }
+
+    console.log("Mostrando tabela com", dados.length, "equipamentos");
+    tbody.innerHTML = "";
+
+    dados.forEach((unit) => {
+      console.log("📋 Processando equipamento na tabela:", unit);
+      console.log("📋 BL:", unit.BL);
+      console.log("📋 Container:", unit.container);
+      console.log("📋 Destino:", unit.destino);
+      console.log("📋 Lacre INN:", unit.lacre_inn);
+      console.log("📋 Lacre:", unit.lacre);
+
+      let row = document.createElement("tr");
+      row.style.cursor = "pointer";
+
+      // Armazena os dados do equipamento na linha
+      row.dataset.unitnumber = unit.unitnumber || "";
+      row.dataset.bl = unit.BL || "";
+      row.dataset.container = unit.container || "";
+      row.dataset.destino = unit.destino || "";
+      row.dataset.lacre_inn = unit.lacre_inn || "";
+      row.dataset.lacre = unit.lacre || "";
+
+      console.log("📋 Dados armazenados na linha:", {
+        unitnumber: row.dataset.unitnumber,
+        bl: row.dataset.bl,
+        container: row.dataset.container,
+        destino: row.dataset.destino,
+        lacre_inn: row.dataset.lacre_inn,
+        lacre: row.dataset.lacre,
+      });
+
+      if (unit.FRecvTime && unit.FGPSTime) {
+        // AssetsControls
+        let portaStatus = "N/A";
+        if (unit.FDoor !== undefined && unit.FDoor !== null) {
+          if (parseInt(unit.FDoor) === 1) {
+            portaStatus = "Aberta";
+          } else if (parseInt(unit.FDoor) === 0) {
+            portaStatus = "Fechada";
+          } else if (parseInt(unit.FDoor) === -1) {
+            portaStatus = "-";
+          } else {
+            portaStatus = `FDoor: ${unit.FDoor}`;
+            if (portaStatus === "FDoor: -1") portaStatus = "-";
+          }
+          console.log(
+            `🚪 FDoor (porta): ${unit.FDoor} | Status: ${portaStatus}`
+          );
+        }
+        // Luminosidade extraída do FExpandProto.FDesc
+        let luminosidade = "N/A";
+        if (unit.FExpandProto && unit.FExpandProto.FDesc) {
+          try {
+            const descObj =
+              typeof unit.FExpandProto.FDesc === "string"
+                ? JSON.parse(unit.FExpandProto.FDesc)
+                : unit.FExpandProto.FDesc;
+            if (descObj.fLx !== undefined && descObj.fLx !== null) {
+              luminosidade = descObj.fLx.toString();
+              console.log(`🔆 fLx (luminosidade): ${descObj.fLx}`);
+            } else {
+              console.log("⚠️ fLx não encontrado em FDesc:", descObj);
             }
-            
-            console.log("Mostrando tabela com", dados.length, "equipamentos");
-            tbody.innerHTML = "";
-            
-            dados.forEach(unit => {
-                console.log("📋 Processando equipamento na tabela:", unit);
-                console.log("📋 BL:", unit.BL);
-                console.log("📋 Container:", unit.container);
-                console.log("📋 Destino:", unit.destino);
-                console.log("📋 Lacre INN:", unit.lacre_inn);
-                console.log("📋 Lacre:", unit.lacre);
-                
-                let row = document.createElement("tr");
-                row.style.cursor = "pointer";
-                
-                // Armazena os dados do equipamento na linha
-                row.dataset.unitnumber = unit.unitnumber || '';
-                row.dataset.bl = unit.BL || '';
-                row.dataset.container = unit.container || '';
-                row.dataset.destino = unit.destino || '';
-                row.dataset.lacre_inn = unit.lacre_inn || '';
-                row.dataset.lacre = unit.lacre || '';
-                
-                console.log("📋 Dados armazenados na linha:", {
-                    unitnumber: row.dataset.unitnumber,
-                    bl: row.dataset.bl,
-                    container: row.dataset.container,
-                    destino: row.dataset.destino,
-                    lacre_inn: row.dataset.lacre_inn,
-                    lacre: row.dataset.lacre
-                });
-                
-                if (unit.FRecvTime && unit.FGPSTime) {
-                    // AssetsControls
-                    let portaStatus = "N/A";
-                    if (unit.FDoor !== undefined && unit.FDoor !== null) {
-                        if (parseInt(unit.FDoor) === 1) {
-                            portaStatus = "Aberta";
-                        } else if (parseInt(unit.FDoor) === 0) {
-                            portaStatus = "Fechada";
-                        } else if (parseInt(unit.FDoor) === -1) {
-                            portaStatus = "-";
-                        } else {
-                            portaStatus = `FDoor: ${unit.FDoor}`;
-                            if (portaStatus === 'FDoor: -1') portaStatus = '-';
-                        }
-                        console.log(`🚪 FDoor (porta): ${unit.FDoor} | Status: ${portaStatus}`);
-                    }
-                    // Luminosidade extraída do FExpandProto.FDesc
-                    let luminosidade = "N/A";
-                    if (unit.FExpandProto && unit.FExpandProto.FDesc) {
-                        try {
-                            const descObj = typeof unit.FExpandProto.FDesc === 'string' ? JSON.parse(unit.FExpandProto.FDesc) : unit.FExpandProto.FDesc;
-                            if (descObj.fLx !== undefined && descObj.fLx !== null) {
-                                luminosidade = descObj.fLx.toString();
-                                console.log(`🔆 fLx (luminosidade): ${descObj.fLx}`);
-                            } else {
-                                console.log('⚠️ fLx não encontrado em FDesc:', descObj);
-                            }
-                        } catch (e) {
-                            console.log("Erro ao parsear FDesc:", e, unit.FExpandProto.FDesc);
-                        }
-                    } else {
-                        console.log('⚠️ FExpandProto ou FDesc ausente:', unit.FExpandProto);
-                    }
-                    
-                    // Normaliza campos para AssetsControls
-                    const BL = unit.BL || unit.bl || '';
-                    const container = unit.container || unit.Container || '';
-                    const destino = unit.destino || unit.Destino || '';
-                    const lacre_inn = unit.lacre_inn || unit.lacreInn || '';
-                    const lacre = unit.lacre || unit.Lacre || '';
-                    
-                    row.innerHTML = `
+          } catch (e) {
+            console.log("Erro ao parsear FDesc:", e, unit.FExpandProto.FDesc);
+          }
+        } else {
+          console.log("⚠️ FExpandProto ou FDesc ausente:", unit.FExpandProto);
+        }
+
+        // Normaliza campos para AssetsControls
+        const BL = unit.BL || unit.bl || "";
+        const container = unit.container || unit.Container || "";
+        const destino = unit.destino || unit.Destino || "";
+        const lacre_inn = unit.lacre_inn || unit.lacreInn || "";
+        const lacre = unit.lacre || unit.Lacre || "";
+
+        row.innerHTML = `
                         <td><strong>${unit.unitnumber}</strong></td>
-                        <td>${unit.FBattery ? Math.min(100, unit.FBattery) : 'N/A'}%🔋</td>
+                        <td>${
+                          unit.FBattery ? Math.min(100, unit.FBattery) : "N/A"
+                        }%🔋</td>
                         <td>${portaStatus}</td>
                         <td>${luminosidade}</td>
-                        <td class="bl-cell">${BL || 'N/A'}</td>
-                        <td class="container-cell">${container || 'N/A'}</td>
-                        <td class="destino-cell">${destino || 'N/A'}</td>
-                        <td class="lacre-inn-cell">${lacre_inn || 'N/A'}</td>
-                        <td class="lacre-cell">${lacre || 'N/A'}</td>
-                        <td><small>${unit.latitude}, ${unit.longitude}</small></td>
-                        <td><small>${formatarDataHora(unit.FRecvTime) || formatarDataHora(unit.FGPSTime) || 'N/A'}</small></td>
+                        <td class="bl-cell">${BL || "N/A"}</td>
+                        <td class="container-cell">${container || "N/A"}</td>
+                        <td class="destino-cell">${destino || "N/A"}</td>
+                        <td class="lacre-inn-cell">${lacre_inn || "N/A"}</td>
+                        <td class="lacre-cell">${lacre || "N/A"}</td>
+                        <td><small>${unit.latitude}, ${
+          unit.longitude
+        }</small></td>
+                        <td><small>${
+                          formatarDataHora(unit.FRecvTime) ||
+                          formatarDataHora(unit.FGPSTime) ||
+                          "N/A"
+                        }</small></td>
                     `;
-                } else {
-                    // T42
-                    const bateria = unit.main_voltage ? Math.min(100, Math.round((unit.main_voltage - 3.5) / (4.17 - 3.5) * 100)) + "%" : "N/A";
-                row.innerHTML = `
+      } else {
+        // T42
+        const bateria = unit.main_voltage
+          ? Math.min(
+              100,
+              Math.round(((unit.main_voltage - 3.5) / (4.17 - 3.5)) * 100)
+            ) + "%"
+          : "N/A";
+        row.innerHTML = `
                         <td><strong>${unit.unitnumber}</strong></td>
                         <td>${bateria}🔋</td>
-                    <td>${parseInt(unit.door) === 1 ? "Aberto" : parseInt(unit.door) === 0 ? "Fechado" : parseInt(unit.door) === -1 ? "-" : "-"}</td>
+                    <td>${
+                      parseInt(unit.door) === 1
+                        ? "Aberto"
+                        : parseInt(unit.door) === 0
+                        ? "Fechado"
+                        : parseInt(unit.door) === -1
+                        ? "-"
+                        : "-"
+                    }</td>
                     <td>${parseInt(unit.light)}</td>
                     <td class="bl-cell">${unit.BL || ""}</td>
                     <td class="container-cell">${unit.container || ""}</td>
                     <td class="destino-cell">${unit.destino || ""}</td>
-                    <td class="lacre-inn-cell">${unit.lacre_inn || 'N/A'}</td>
-                    <td class="lacre-cell">${unit.lacre || 'N/A'}</td>
+                    <td class="lacre-inn-cell">${unit.lacre_inn || "N/A"}</td>
+                    <td class="lacre-cell">${unit.lacre || "N/A"}</td>
                     <td><small>${unit.latitude}, ${unit.longitude}</small></td>
-                        <td><small>${formatarDataHora(unit.datetime_utc) || 'N/A'}</small></td>
+                        <td><small>${
+                          formatarDataHora(unit.datetime_utc) || "N/A"
+                        }</small></td>
                 `;
-                }
-                
-                // Adiciona evento de clique para destacar e abrir modal
-                row.addEventListener('click', () => {
-                    destacarEquipamentoNaTabela(unit.unitnumber);
-                    destacarEquipamentoNoMapa(unit.unitnumber);
-                    abrirModalEdicao(row);
-                });
-                
-                // Adiciona evento de clique duplo para apenas destacar (sem abrir modal)
-                row.addEventListener('dblclick', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    destacarEquipamentoNaTabela(unit.unitnumber);
-                    destacarEquipamentoNoMapa(unit.unitnumber);
-                });
-                tbody.appendChild(row);
-            });
-        }
-        
-        // Função para atualizar mapa
-        function atualizarMapa(dados) {
-            console.log("🗺️ Atualizando mapa com", dados.length, "equipamentos");
-            console.log("🗺️ Marcadores antes de remover:", Object.keys(markers));
-            
-            // Remove marcadores antigos
-            Object.values(markers).forEach(marker => map.removeLayer(marker));
-            markers = {};
-            
-            console.log("🗺️ Marcadores removidos. Iniciando criação de novos marcadores...");
-    
-            dados.forEach(unit => {
-                if (unit.latitude && unit.longitude) {
-                    let popupContent = '';
-                    
-                    if (unit.FRecvTime && unit.FGPSTime) {
-                        // AssetsControls
-                        let portaStatus = "N/A";
-                        if (unit.FDoor !== undefined && unit.FDoor !== null) {
-                            if (parseInt(unit.FDoor) === 1) {
-                                portaStatus = "Aberta";
-                            } else if (parseInt(unit.FDoor) === 0) {
-                                portaStatus = "Fechada";
-                            } else if (parseInt(unit.FDoor) === -1) {
-                                portaStatus = "-";
-                            } else {
-                                portaStatus = `FDoor: ${unit.FDoor}`;
-                                if (portaStatus === 'FDoor: -1') portaStatus = '-';
-                            }
-                            console.log(`🚪 FDoor (porta): ${unit.FDoor} | Status: ${portaStatus}`);
-                        }
-                
-                                            // Luminosidade extraída do FExpandProto.FDesc
-                    let luminosidade = "N/A";
-                    if (unit.FExpandProto && unit.FExpandProto.FDesc) {
-                        try {
-                            const descObj = typeof unit.FExpandProto.FDesc === 'string' ? JSON.parse(unit.FExpandProto.FDesc) : unit.FExpandProto.FDesc;
-                            if (descObj.fLx !== undefined && descObj.fLx !== null) {
-                                luminosidade = descObj.fLx.toString();
-                                console.log(`🔆 fLx (luminosidade): ${descObj.fLx}`);
-                            } else {
-                                console.log('⚠️ fLx não encontrado em FDesc:', descObj);
-                            }
-                        } catch (e) {
-                            console.log("Erro ao parsear FDesc:", e, unit.FExpandProto.FDesc);
-                        }
-                    } else {
-                        console.log('⚠️ FExpandProto ou FDesc ausente:', unit.FExpandProto);
-                    }
-                        
-                        popupContent = `
+      }
+
+      // Adiciona evento de clique para destacar e abrir modal
+      row.addEventListener("click", () => {
+        destacarEquipamentoNaTabela(unit.unitnumber);
+        destacarEquipamentoNoMapa(unit.unitnumber);
+        abrirModalEdicao(row);
+      });
+
+      // Adiciona evento de clique duplo para apenas destacar (sem abrir modal)
+      row.addEventListener("dblclick", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        destacarEquipamentoNaTabela(unit.unitnumber);
+        destacarEquipamentoNoMapa(unit.unitnumber);
+      });
+      tbody.appendChild(row);
+    });
+  }
+
+  // Função para atualizar mapa
+  function atualizarMapa(dados) {
+    console.log("🗺️ Atualizando mapa com", dados.length, "equipamentos");
+    console.log("🗺️ Marcadores antes de remover:", Object.keys(markers));
+
+    // Remove marcadores antigos
+    Object.values(markers).forEach((marker) => map.removeLayer(marker));
+    markers = {};
+
+    console.log(
+      "🗺️ Marcadores removidos. Iniciando criação de novos marcadores..."
+    );
+
+    dados.forEach((unit) => {
+      if (unit.latitude && unit.longitude) {
+        let popupContent = "";
+
+        if (unit.FRecvTime && unit.FGPSTime) {
+          // AssetsControls
+          let portaStatus = "N/A";
+          if (unit.FDoor !== undefined && unit.FDoor !== null) {
+            if (parseInt(unit.FDoor) === 1) {
+              portaStatus = "Aberta";
+            } else if (parseInt(unit.FDoor) === 0) {
+              portaStatus = "Fechada";
+            } else if (parseInt(unit.FDoor) === -1) {
+              portaStatus = "-";
+            } else {
+              portaStatus = `FDoor: ${unit.FDoor}`;
+              if (portaStatus === "FDoor: -1") portaStatus = "-";
+            }
+            console.log(
+              `🚪 FDoor (porta): ${unit.FDoor} | Status: ${portaStatus}`
+            );
+          }
+
+          // Luminosidade extraída do FExpandProto.FDesc
+          let luminosidade = "N/A";
+          if (unit.FExpandProto && unit.FExpandProto.FDesc) {
+            try {
+              const descObj =
+                typeof unit.FExpandProto.FDesc === "string"
+                  ? JSON.parse(unit.FExpandProto.FDesc)
+                  : unit.FExpandProto.FDesc;
+              if (descObj.fLx !== undefined && descObj.fLx !== null) {
+                luminosidade = descObj.fLx.toString();
+                console.log(`🔆 fLx (luminosidade): ${descObj.fLx}`);
+              } else {
+                console.log("⚠️ fLx não encontrado em FDesc:", descObj);
+              }
+            } catch (e) {
+              console.log("Erro ao parsear FDesc:", e, unit.FExpandProto.FDesc);
+            }
+          } else {
+            console.log("⚠️ FExpandProto ou FDesc ausente:", unit.FExpandProto);
+          }
+
+          popupContent = `
                             <b>Equipamento ${unit.unitnumber}</b><br>
                             <strong>📍 Coordenadas:</strong><br>
-                            <small>${unit.latitude}, ${unit.longitude}</small><br><br>
-                            Bateria: <strong>${unit.FBattery ? Math.min(100, unit.FBattery) : 'N/A'}%🔋</strong><br>
+                            <small>${unit.latitude}, ${
+            unit.longitude
+          }</small><br><br>
+                            Bateria: <strong>${
+                              unit.FBattery
+                                ? Math.min(100, unit.FBattery)
+                                : "N/A"
+                            }%🔋</strong><br>
                             Porta: <strong>${portaStatus}</strong><br>
                             Luminosidade: <strong>${luminosidade}</strong><br>
-                            <strong>Última Atualização:</strong> ${formatarDataHora(unit.FRecvTime) || formatarDataHora(unit.FGPSTime) || 'N/A'}<br>
-                            <strong>Última posição válida:</strong> ${formatarDataHora(unit.FGPSTime) || formatarDataHora(unit.FRecvTime) || 'N/A'}
+                            <strong>Última Atualização:</strong> ${
+                              formatarDataHora(unit.FRecvTime) ||
+                              formatarDataHora(unit.FGPSTime) ||
+                              "N/A"
+                            }<br>
+                            <strong>Última posição válida:</strong> ${
+                              formatarDataHora(unit.FGPSTime) ||
+                              formatarDataHora(unit.FRecvTime) ||
+                              "N/A"
+                            }
                         `;
-                    } else {
-                        // T42
-                        popupContent = `
+        } else {
+          // T42
+          popupContent = `
                         <b>Equipamento ${unit.unitnumber}</b><br>
                         <strong>📍 Coordenadas:</strong><br>
-                        <small>${unit.latitude}, ${unit.longitude}</small><br><br>
-                        Bateria: <strong>${unit.main_voltage ? Math.min(100, Math.round((unit.main_voltage - 3.5) / (4.17 - 3.5) * 100)) + "%" : "N/A"}🔋</strong><br>
-                        Porta: <strong>${parseInt(unit.door) === 1 ? "Aberto" : parseInt(unit.door) === 0 ? "Fechado" : parseInt(unit.door) === -1 ? "-" : "-"}</strong><br>
-                        Luminosidade: <strong>${parseInt(unit.light)}</strong><br>
-                            Última Atualização: <strong>${formatarDataHora(unit.datetime_utc) || 'N/A'}</strong>
+                        <small>${unit.latitude}, ${
+            unit.longitude
+          }</small><br><br>
+                        Bateria: <strong>${
+                          unit.main_voltage
+                            ? Math.min(
+                                100,
+                                Math.round(
+                                  ((unit.main_voltage - 3.5) / (4.17 - 3.5)) *
+                                    100
+                                )
+                              ) + "%"
+                            : "N/A"
+                        }🔋</strong><br>
+                        Porta: <strong>${
+                          parseInt(unit.door) === 1
+                            ? "Aberto"
+                            : parseInt(unit.door) === 0
+                            ? "Fechado"
+                            : parseInt(unit.door) === -1
+                            ? "-"
+                            : "-"
+                        }</strong><br>
+                        Luminosidade: <strong>${parseInt(
+                          unit.light
+                        )}</strong><br>
+                            Última Atualização: <strong>${
+                              formatarDataHora(unit.datetime_utc) || "N/A"
+                            }</strong>
                         `;
-                    }
-                    
-                    console.log("🗺️ Criando marcador para:", unit.unitnumber, "em", unit.latitude, unit.longitude);
-                    
-                    markers[unit.unitnumber] = L.marker([unit.latitude, unit.longitude])
-                        .addTo(map)
-                        .bindPopup(popupContent)
-                        .on('click', function(e) {
-                            console.log("🎯 EVENTO DE CLIQUE DETECTADO!");
-                            console.log("🎯 Equipamento clicado:", unit.unitnumber);
-                            console.log("🎯 Evento:", e);
-                            console.log("🎯 CLICOU NO MARCADOR:", unit.unitnumber);
-                            
-                            // Preenche o campo de busca
-                            document.getElementById("searchInput").value = unit.unitnumber;
-                            
-                            // Mostra loading
-                            showLoading("Carregando dados do equipamento...");
-                            
-                            // Detecta o tipo de equipamento
-                            const isAssetsControlsId = /^\d{12}$/.test(unit.unitnumber);
-                            
-                            // Mostra/esconde botão de histórico
-                            const btnHistorico = document.getElementById('btnHistorico');
-                            if (isAssetsControlsId) {
-                                btnHistorico.style.display = 'none';
-                            } else {
-                                btnHistorico.style.display = 'inline-block';
-                            }
-                            
-                            // Carrega os dados baseado no tipo
-                            if (isAssetsControlsId) {
-                                // AssetsControls
-                                fetch(`/api/get_assetscontrols_data/?id=${encodeURIComponent(unit.unitnumber)}`)
-                                    .then(resp => resp.json())
-                                    .then(data => {
-                                        console.log("📡 Dados AssetsControls recebidos:", data);
-                                        console.log("📡 Estrutura completa dos dados:", JSON.stringify(data, null, 2));
-                                        
-                                        if (data && data.FObject && Array.isArray(data.FObject)) {
-                                            const equipamentoEncontrado = data.FObject.find(item => 
-                                                String(item.FAssetID || item.FVehicleName) === unit.unitnumber
-                                            );
-                                            
-                                            if (equipamentoEncontrado) {
-                                                console.log("🔍 Dados do equipamento encontrado:", equipamentoEncontrado);
-                                                console.log("🔍 BL do banco:", equipamentoEncontrado.BL);
-                                                console.log("🔍 Container do banco:", equipamentoEncontrado.container);
-                                                console.log("🔍 Destino do banco:", equipamentoEncontrado.destino);
-                                                console.log("🔍 Lacre INN do banco:", equipamentoEncontrado.lacre_inn);
-                                                console.log("🔍 Lacre do banco:", equipamentoEncontrado.lacre);
-                                                console.log("🔍 Todas as chaves do objeto:", Object.keys(equipamentoEncontrado));
-                                                
-                                                const equipamentoProcessado = {
-                                                    unitnumber: equipamentoEncontrado.FAssetID || equipamentoEncontrado.FVehicleName || 'N/A',
-                                                    latitude: equipamentoEncontrado.FLatitude,
-                                                    longitude: equipamentoEncontrado.FLongitude,
-                                                    FRecvTime: equipamentoEncontrado.FRecvTime,
-                                                    FGPSTime: equipamentoEncontrado.FGPSTime,
-                                                    FBattery: equipamentoEncontrado.FBattery,
-                                                    FDoor: equipamentoEncontrado.FDoor,
-                                                    FExpandProto: equipamentoEncontrado.FExpandProto,
-                                                    BL: equipamentoEncontrado.BL || '',
-                                                    container: equipamentoEncontrado.container || '',
-                                                    destino: equipamentoEncontrado.destino || '',
-                                                    lacre_inn: equipamentoEncontrado.lacre_inn || '',
-                                                    lacre: equipamentoEncontrado.lacre || '',
-                                                    main_voltage: null,
-                                                    door: '0',
-                                                    light: '0',
-                                                };
-                                                
-                                                console.log("✅ Equipamento processado com dados do banco:", equipamentoProcessado);
-                                                
-                                                console.log("✅ Equipamento processado:", equipamentoProcessado);
-                                                atualizarTabela([equipamentoProcessado]);
-                                                atualizarMapa([equipamentoProcessado]);
-                                                
-                                                // Destaca na tabela
-                                                setTimeout(() => {
-                                                    destacarEquipamentoNaTabela(unit.unitnumber);
-                                                }, 200);
-                                            } else {
-                                                console.log("❌ Equipamento não encontrado");
-                                                document.getElementById("resultadosTabelaBody").innerHTML = `
+        }
+
+        console.log(
+          "🗺️ Criando marcador para:",
+          unit.unitnumber,
+          "em",
+          unit.latitude,
+          unit.longitude
+        );
+
+        markers[unit.unitnumber] = L.marker([unit.latitude, unit.longitude])
+          .addTo(map)
+          .bindPopup(popupContent)
+          .on("click", function (e) {
+            console.log("🎯 EVENTO DE CLIQUE DETECTADO!");
+            console.log("🎯 Equipamento clicado:", unit.unitnumber);
+            console.log("🎯 Evento:", e);
+            console.log("🎯 CLICOU NO MARCADOR:", unit.unitnumber);
+
+            // Preenche o campo de busca
+            document.getElementById("searchInput").value = unit.unitnumber;
+
+            // Mostra loading
+            showLoading("Carregando dados do equipamento...");
+
+            // Detecta o tipo de equipamento
+            const isAssetsControlsId = /^\d{12}$/.test(unit.unitnumber);
+
+            // Mostra/esconde botão de histórico
+            const btnHistorico = document.getElementById("btnHistorico");
+            if (isAssetsControlsId) {
+              btnHistorico.style.display = "none";
+            } else {
+              btnHistorico.style.display = "inline-block";
+            }
+
+            // Carrega os dados baseado no tipo
+            if (isAssetsControlsId) {
+              // AssetsControls
+              fetch(
+                `/api/get_assetscontrols_data/?id=${encodeURIComponent(
+                  unit.unitnumber
+                )}`
+              )
+                .then((resp) => resp.json())
+                .then((data) => {
+                  console.log("📡 Dados AssetsControls recebidos:", data);
+                  console.log(
+                    "📡 Estrutura completa dos dados:",
+                    JSON.stringify(data, null, 2)
+                  );
+
+                  if (data && data.FObject && Array.isArray(data.FObject)) {
+                    const equipamentoEncontrado = data.FObject.find(
+                      (item) =>
+                        String(item.FAssetID || item.FVehicleName) ===
+                        unit.unitnumber
+                    );
+
+                    if (equipamentoEncontrado) {
+                      console.log(
+                        "🔍 Dados do equipamento encontrado:",
+                        equipamentoEncontrado
+                      );
+                      console.log("🔍 BL do banco:", equipamentoEncontrado.BL);
+                      console.log(
+                        "🔍 Container do banco:",
+                        equipamentoEncontrado.container
+                      );
+                      console.log(
+                        "🔍 Destino do banco:",
+                        equipamentoEncontrado.destino
+                      );
+                      console.log(
+                        "🔍 Lacre INN do banco:",
+                        equipamentoEncontrado.lacre_inn
+                      );
+                      console.log(
+                        "🔍 Lacre do banco:",
+                        equipamentoEncontrado.lacre
+                      );
+                      console.log(
+                        "🔍 Todas as chaves do objeto:",
+                        Object.keys(equipamentoEncontrado)
+                      );
+
+                      const equipamentoProcessado = {
+                        unitnumber:
+                          equipamentoEncontrado.FAssetID ||
+                          equipamentoEncontrado.FVehicleName ||
+                          "N/A",
+                        latitude: equipamentoEncontrado.FLatitude,
+                        longitude: equipamentoEncontrado.FLongitude,
+                        FRecvTime: equipamentoEncontrado.FRecvTime,
+                        FGPSTime: equipamentoEncontrado.FGPSTime,
+                        FBattery: equipamentoEncontrado.FBattery,
+                        FDoor: equipamentoEncontrado.FDoor,
+                        FExpandProto: equipamentoEncontrado.FExpandProto,
+                        BL: equipamentoEncontrado.BL || "",
+                        container: equipamentoEncontrado.container || "",
+                        destino: equipamentoEncontrado.destino || "",
+                        lacre_inn: equipamentoEncontrado.lacre_inn || "",
+                        lacre: equipamentoEncontrado.lacre || "",
+                        main_voltage: null,
+                        door: "0",
+                        light: "0",
+                      };
+
+                      console.log(
+                        "✅ Equipamento processado com dados do banco:",
+                        equipamentoProcessado
+                      );
+
+                      console.log(
+                        "✅ Equipamento processado:",
+                        equipamentoProcessado
+                      );
+                      atualizarTabela([equipamentoProcessado]);
+                      atualizarMapa([equipamentoProcessado]);
+
+                      // Destaca na tabela
+                      setTimeout(() => {
+                        destacarEquipamentoNaTabela(unit.unitnumber);
+                      }, 200);
+                    } else {
+                      console.log("❌ Equipamento não encontrado");
+                      document.getElementById(
+                        "resultadosTabelaBody"
+                      ).innerHTML = `
                                                     <tr>
                                                         <td colspan="11" class="text-center text-muted">
                                                             <i class="fas fa-exclamation-triangle"></i> Equipamento ${unit.unitnumber} não encontrado.
                                                         </td>
                                                     </tr>
                                                 `;
-                                            }
-                                        } else {
-                                            console.log("❌ Estrutura de dados inválida");
-                                            document.getElementById("resultadosTabelaBody").innerHTML = `
+                    }
+                  } else {
+                    console.log("❌ Estrutura de dados inválida");
+                    document.getElementById(
+                      "resultadosTabelaBody"
+                    ).innerHTML = `
                                                 <tr>
                                                     <td colspan="11" class="text-center text-muted">
                                                         <i class="fas fa-exclamation-triangle"></i> Erro ao carregar dados do equipamento.
                                                     </td>
                                                 </tr>
                                             `;
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error("❌ Erro ao carregar AssetsControls:", error);
-                                        document.getElementById("resultadosTabelaBody").innerHTML = `
+                  }
+                })
+                .catch((error) => {
+                  console.error("❌ Erro ao carregar AssetsControls:", error);
+                  document.getElementById("resultadosTabelaBody").innerHTML = `
                                             <tr>
                                                 <td colspan="11" class="text-center text-muted">
                                                     <i class="fas fa-exclamation-triangle"></i> Erro ao conectar com o servidor.
                                                 </td>
                                             </tr>
                                         `;
-                                    });
-                            } else {
-                                // T42
-                                fetch(`/api/get_t42_data/?id=${encodeURIComponent(unit.unitnumber)}`)
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        console.log("📡 Dados T42 recebidos:", data);
-                                        
-                                        const equipamentoEncontrado = data.find(item => 
-                                            String(item.unitnumber) === unit.unitnumber
-                                        );
-                                        
-                                        if (equipamentoEncontrado) {
-                                            console.log("✅ Equipamento T42 encontrado:", equipamentoEncontrado);
-                                            atualizarTabela([equipamentoEncontrado]);
-                                            atualizarMapa([equipamentoEncontrado]);
-                                            
-                                            // Destaca na tabela
-                                            setTimeout(() => {
-                                                destacarEquipamentoNaTabela(unit.unitnumber);
-                                            }, 200);
-                                        } else {
-                                            console.log("❌ Equipamento T42 não encontrado");
-                                            document.getElementById("resultadosTabelaBody").innerHTML = `
+                });
+            } else {
+              // T42
+              fetch(
+                `/api/get_t42_data/?id=${encodeURIComponent(unit.unitnumber)}`
+              )
+                .then((response) => response.json())
+                .then((data) => {
+                  console.log("📡 Dados T42 recebidos:", data);
+
+                  const equipamentoEncontrado = data.find(
+                    (item) => String(item.unitnumber) === unit.unitnumber
+                  );
+
+                  if (equipamentoEncontrado) {
+                    console.log(
+                      "✅ Equipamento T42 encontrado:",
+                      equipamentoEncontrado
+                    );
+                    atualizarTabela([equipamentoEncontrado]);
+                    atualizarMapa([equipamentoEncontrado]);
+
+                    // Destaca na tabela
+                    setTimeout(() => {
+                      destacarEquipamentoNaTabela(unit.unitnumber);
+                    }, 200);
+                  } else {
+                    console.log("❌ Equipamento T42 não encontrado");
+                    document.getElementById(
+                      "resultadosTabelaBody"
+                    ).innerHTML = `
                                                 <tr>
                                                     <td colspan="11" class="text-center text-muted">
                                                         <i class="fas fa-exclamation-triangle"></i> Equipamento ${unit.unitnumber} não encontrado.
                                                     </td>
                                                 </tr>
                                             `;
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error("❌ Erro ao carregar T42:", error);
-                                        document.getElementById("resultadosTabelaBody").innerHTML = `
+                  }
+                })
+                .catch((error) => {
+                  console.error("❌ Erro ao carregar T42:", error);
+                  document.getElementById("resultadosTabelaBody").innerHTML = `
                                             <tr>
                                                 <td colspan="11" class="text-center text-muted">
                                                     <i class="fas fa-exclamation-triangle"></i> Erro ao conectar com o servidor.
                                             </td>
                                         </tr>
                                     `;
-                                    });
-                            }
-                        });
-                }
-            });
-            
-            // Centraliza o mapa no primeiro equipamento
-            if (dados.length > 0 && dados[0].latitude && dados[0].longitude) {
-                map.setView([dados[0].latitude, dados[0].longitude], 10);
+                });
             }
-            
-            console.log("🗺️ Mapa atualizado. Marcadores criados:", Object.keys(markers));
-            console.log("🗺️ Total de marcadores:", Object.keys(markers).length);
-        }
-        
-        // Função para mostrar loading
-        function showLoading(message) {
-            document.getElementById("resultadosTabelaBody").innerHTML = `
+          });
+      }
+    });
+
+    // Centraliza o mapa no primeiro equipamento
+    if (dados.length > 0 && dados[0].latitude && dados[0].longitude) {
+      map.setView([dados[0].latitude, dados[0].longitude], 10);
+    }
+
+    console.log(
+      "🗺️ Mapa atualizado. Marcadores criados:",
+      Object.keys(markers)
+    );
+    console.log("🗺️ Total de marcadores:", Object.keys(markers).length);
+  }
+
+  // Função para mostrar loading
+  function showLoading(message) {
+    document.getElementById("resultadosTabelaBody").innerHTML = `
                 <tr>
                     <td colspan="11" class="text-center">
                         <div class="spinner-border text-primary" role="status">
@@ -1294,772 +1561,881 @@
                     </td>
                 </tr>
             `;
-            }
-    
-        // Função para esconder loading (não esconde mais a tabela)
-        function hideLoading() {
-            // Não faz nada - a tabela permanece visível
-        }
-        
-        // Função com debounce (removida para simplificar)
-        function filtrarEquipamentosComDebounce() {
-            filtrarEquipamentos();
-        }
+  }
 
-        // Função para abrir o modal de edição
-        function abrirModalEdicao(row) {
-            const unitnumber = row.dataset.unitnumber;
-            const bl = row.dataset.bl;
-            const container = row.dataset.container;
-            const destino = row.dataset.destino;
-            const lacreInn = row.dataset.lacre_inn;
-            const lacre = row.dataset.lacre;
-            
-            console.log("🔍 Abrindo modal com dados da linha:", {
-                unitnumber: unitnumber,
-                bl: bl,
-                container: container,
-                destino: destino,
-                lacreInn: lacreInn,
-                lacre: lacre
-            });
-            const bateria = row.cells[1].textContent.split('🔋')[0];
-            const porta = row.cells[2].textContent;
-            const luminosidade = row.cells[3].textContent;
-            const localizacao = row.cells[7].textContent;
-            const atualizacaoRaw = row.cells[8].getAttribute('data-raw') || row.cells[8].textContent;
+  // Função para esconder loading (não esconde mais a tabela)
+  function hideLoading() {
+    // Não faz nada - a tabela permanece visível
+  }
 
-            document.getElementById("modalUnitId").value = unitnumber;
-            document.getElementById("modalBL").value = bl;
-            document.getElementById("modalContainer").value = container;
-            document.getElementById("modalDestino").value = destino;
-            document.getElementById("modalBateria").value = bateria;
-            document.getElementById("modalPorta").value = porta;
-            document.getElementById("modalLuminosidade").value = luminosidade;
-            document.getElementById("modalLocalizacao").value = localizacao;
-            document.getElementById("modalAtualizacao").value = formatarDataHora(atualizacaoRaw) || atualizacaoRaw;
-            document.getElementById("modalLacreInn").value = lacreInn;
-            document.getElementById("modalLacre").value = lacre;
+  // Função com debounce (removida para simplificar)
+  function filtrarEquipamentosComDebounce() {
+    filtrarEquipamentos();
+  }
 
-            // Salva referência da linha editada
-            document.getElementById('editEquipForm').dataset.rowIndex = row.rowIndex;
+  // Função para abrir o modal de edição
+  function abrirModalEdicao(row) {
+    const unitnumber = row.dataset.unitnumber;
+    const bl = row.dataset.bl;
+    const container = row.dataset.container;
+    const destino = row.dataset.destino;
+    const lacreInn = row.dataset.lacre_inn;
+    const lacre = row.dataset.lacre;
 
-            // Limpa completamente qualquer backdrop antes de abrir
-            limparFundoCinza();
+    console.log("🔍 Abrindo modal com dados da linha:", {
+      unitnumber: unitnumber,
+      bl: bl,
+      container: container,
+      destino: destino,
+      lacreInn: lacreInn,
+      lacre: lacre,
+    });
+    const bateria = row.cells[1].textContent.split("🔋")[0];
+    const porta = row.cells[2].textContent;
+    const luminosidade = row.cells[3].textContent;
+    const localizacao = row.cells[7].textContent;
+    const atualizacaoRaw =
+      row.cells[8].getAttribute("data-raw") || row.cells[8].textContent;
 
-            // Abre modal sem backdrop
-            const modal = new bootstrap.Modal(document.getElementById('editEquipModal'), {
-                backdrop: false,
-                keyboard: true,
-                focus: true
-            });
-            
-            modal.show();
-            
-            // Garante que não há backdrop após abrir
-            setTimeout(limparFundoCinza, 100);
-        }
+    document.getElementById("modalUnitId").value = unitnumber;
+    document.getElementById("modalBL").value = bl;
+    document.getElementById("modalContainer").value = container;
+    document.getElementById("modalDestino").value = destino;
+    document.getElementById("modalBateria").value = bateria;
+    document.getElementById("modalPorta").value = porta;
+    document.getElementById("modalLuminosidade").value = luminosidade;
+    document.getElementById("modalLocalizacao").value = localizacao;
+    document.getElementById("modalAtualizacao").value =
+      formatarDataHora(atualizacaoRaw) || atualizacaoRaw;
+    document.getElementById("modalLacreInn").value = lacreInn;
+    document.getElementById("modalLacre").value = lacre;
 
-        // Função para fechar modal e limpar fundo cinza
-        function hideModal(modalId) {
-            const modalEl = document.getElementById(modalId);
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            
-            if (modal) {
-                modal.hide();
-            }
-            
-            // Força limpeza completa após fechar
-            setTimeout(() => {
-                limparFundoCinza();
-                modalEl.classList.remove('show');
-                modalEl.style.display = 'none';
-            }, 150);
-        }
+    // Salva referência da linha editada
+    document.getElementById("editEquipForm").dataset.rowIndex = row.rowIndex;
 
-        // Função para limpar completamente o fundo cinza
-        function limparFundoCinza() {
-            // Remove todos os backdrops
-            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-            
-            // Remove classe modal-open do body
-            document.body.classList.remove('modal-open');
-            
-            // Restaura overflow e padding do body
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
-            
-            // Remove qualquer estilo inline que possa estar causando o fundo cinza
-            document.body.removeAttribute('style');
-        }
+    // Limpa completamente qualquer backdrop antes de abrir
+    limparFundoCinza();
 
-        // Adiciona evento de salvar quando a página carrega
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("🔧 Configurando evento de salvar...");
-            
-            // PUT ao clicar em Salvar
-            const salvarBtn = document.getElementById('salvarEdicaoBtn');
-            if (salvarBtn) {
-                console.log("✅ Botão salvar encontrado");
-                salvarBtn.onclick = function () {
-                    console.log("🚀 BOTÃO SALVAR CLICADO!");
-                    
-                    const form = document.getElementById('editEquipForm');
-                    const rowIndex = form.dataset.rowIndex;
-                    console.log("Row index:", rowIndex);
+    // Abre modal sem backdrop
+    const modal = new bootstrap.Modal(
+      document.getElementById("editEquipModal"),
+      {
+        backdrop: false,
+        keyboard: true,
+        focus: true,
+      }
+    );
 
-                    if (rowIndex) {
-                        const tabela = document.getElementById("resultadosTabelaBody");
-                        const row = tabela.rows[rowIndex - 1];
+    modal.show();
 
-                        // Validação dos campos obrigatórios
-                        const bl = document.getElementById('modalBL').value.trim();
-                        const container = document.getElementById('modalContainer').value.trim();
-                        const destino = document.getElementById('modalDestino').value.trim();
-                        const lacreInn = document.getElementById('modalLacreInn').value.trim();
-                        const lacre = document.getElementById('modalLacre').value.trim();
-                        
-                        console.log("📝 Valores dos campos:");
-                        console.log("  - BL:", bl);
-                        console.log("  - Container:", container);
-                        console.log("  - Destino:", destino);
-                        console.log("  - Lacre INN:", lacreInn);
-                        console.log("  - Lacre:", lacre);
-                        
-                        // Validação básica
-                        if (!bl && !container && !destino && !lacreInn && !lacre) {
-                            const alertDiv = document.createElement('div');
-                            alertDiv.className = 'alert alert-warning alert-dismissible fade show';
-                            alertDiv.innerHTML = `
+    // Garante que não há backdrop após abrir
+    setTimeout(limparFundoCinza, 100);
+  }
+
+  // Função para fechar modal e limpar fundo cinza
+  function hideModal(modalId) {
+    const modalEl = document.getElementById(modalId);
+    const modal = bootstrap.Modal.getInstance(modalEl);
+
+    if (modal) {
+      modal.hide();
+    }
+
+    // Força limpeza completa após fechar
+    setTimeout(() => {
+      limparFundoCinza();
+      modalEl.classList.remove("show");
+      modalEl.style.display = "none";
+    }, 150);
+  }
+
+  // Função para limpar completamente o fundo cinza
+  function limparFundoCinza() {
+    // Remove todos os backdrops
+    document.querySelectorAll(".modal-backdrop").forEach((el) => el.remove());
+
+    // Remove classe modal-open do body
+    document.body.classList.remove("modal-open");
+
+    // Restaura overflow e padding do body
+    document.body.style.overflow = "";
+    document.body.style.paddingRight = "";
+
+    // Remove qualquer estilo inline que possa estar causando o fundo cinza
+    document.body.removeAttribute("style");
+  }
+
+  // Adiciona evento de salvar quando a página carrega
+  document.addEventListener("DOMContentLoaded", function () {
+    console.log("🔧 Configurando evento de salvar...");
+
+    // PUT ao clicar em Salvar
+    const salvarBtn = document.getElementById("salvarEdicaoBtn");
+    if (salvarBtn) {
+      console.log("✅ Botão salvar encontrado");
+      salvarBtn.onclick = function () {
+        console.log("🚀 BOTÃO SALVAR CLICADO!");
+
+        const form = document.getElementById("editEquipForm");
+        const rowIndex = form.dataset.rowIndex;
+        console.log("Row index:", rowIndex);
+
+        if (rowIndex) {
+          const tabela = document.getElementById("resultadosTabelaBody");
+          const row = tabela.rows[rowIndex - 1];
+
+          // Validação dos campos obrigatórios
+          const bl = document.getElementById("modalBL").value.trim();
+          const container = document
+            .getElementById("modalContainer")
+            .value.trim();
+          const destino = document.getElementById("modalDestino").value.trim();
+          const lacreInn = document
+            .getElementById("modalLacreInn")
+            .value.trim();
+          const lacre = document.getElementById("modalLacre").value.trim();
+
+          console.log("📝 Valores dos campos:");
+          console.log("  - BL:", bl);
+          console.log("  - Container:", container);
+          console.log("  - Destino:", destino);
+          console.log("  - Lacre INN:", lacreInn);
+          console.log("  - Lacre:", lacre);
+
+          // Validação básica
+          if (!bl && !container && !destino && !lacreInn && !lacre) {
+            const alertDiv = document.createElement("div");
+            alertDiv.className =
+              "alert alert-warning alert-dismissible fade show";
+            alertDiv.innerHTML = `
                                 <strong>Atenção!</strong> Pelo menos um campo deve ser preenchido.
                                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             `;
-                            document.querySelector('#editEquipModal .modal-body').insertBefore(alertDiv, document.querySelector('#editEquipModal .modal-body').firstChild);
-                            return;
-                        }
+            document
+              .querySelector("#editEquipModal .modal-body")
+              .insertBefore(
+                alertDiv,
+                document.querySelector("#editEquipModal .modal-body").firstChild
+              );
+            return;
+          }
 
-                        const dados = {
-                            unitnumber: document.getElementById('modalUnitId').value,
-                            bl: bl,
-                            container: container,
-                            destino: destino,
-                            lacre_inn: lacreInn,
-                            lacre: lacre
-                        };
-                        
-                        console.log("📦 Dados para salvar:", dados);
+          const dados = {
+            unitnumber: document.getElementById("modalUnitId").value,
+            bl: bl,
+            container: container,
+            destino: destino,
+            lacre_inn: lacreInn,
+            lacre: lacre,
+          };
 
-                        // Detecta se é API T42 ou AssetsControls baseado no ID
-                        const isAssetsControls = /^\d{12}$/.test(dados.unitnumber);
-                        console.log("🔍 É AssetsControls?", isAssetsControls);
-                        console.log("🔍 ID:", dados.unitnumber);
-                        console.log("🔍 Regex test:", /^\d{12}$/.test(dados.unitnumber));
+          console.log("📦 Dados para salvar:", dados);
 
-                        // Mostra loading no botão
-                        const originalText = salvarBtn.innerHTML;
-                        salvarBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Salvando...';
-                        salvarBtn.disabled = true;
+          // Detecta se é API T42 ou AssetsControls baseado no ID
+          const isAssetsControls = /^\d{12}$/.test(dados.unitnumber);
+          console.log("🔍 É AssetsControls?", isAssetsControls);
+          console.log("🔍 ID:", dados.unitnumber);
+          console.log("🔍 Regex test:", /^\d{12}$/.test(dados.unitnumber));
 
-                        // Limpa alertas anteriores
-                        const alertasAnteriores = document.querySelectorAll('#editEquipModal .alert');
-                        alertasAnteriores.forEach(alerta => alerta.remove());
+          // Mostra loading no botão
+          const originalText = salvarBtn.innerHTML;
+          salvarBtn.innerHTML =
+            '<i class="fas fa-spinner fa-spin me-2"></i>Salvando...';
+          salvarBtn.disabled = true;
 
-                        if (isAssetsControls) {
-                            console.log('🔄 Fazendo PUT para AssetsControls via backend...');
-                            console.log('🔗 URL:', `/api/assetscontrols/${dados.unitnumber}/`);
-                            
-                            // Mostra o ID que será usado na Golden (últimos 6 dígitos)
-                            const goldenId = dados.unitnumber.slice(-6);
-                            console.log(`🔧 ID original: ${dados.unitnumber}`);
-                            console.log(`🔧 ID para Golden: ${goldenId}`);
-                            
-                            fetch(`/api/assetscontrols/${dados.unitnumber}/`, {
-                                method: 'PUT',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': getCookie('csrftoken')
-                                },
-                                body: JSON.stringify({
-                                    bl: dados.bl,
-                                    container: dados.container,
-                                    destino: dados.destino,
-                                    lacre_inn: dados.lacre_inn,
-                                    lacre: dados.lacre
-                                })
-                            })
-                            .then(response => {
-                                console.log('📡 Resposta AssetsControls:', response.status);
-                                console.log('📡 Headers:', response.headers);
-                                return response.json();
-                            })
-                            .then(data => {
-                                console.log('📄 Dados da resposta:', data);
-                                
-                                // Restaura botão
-                                salvarBtn.innerHTML = originalText;
-                                salvarBtn.disabled = false;
-                                
-                                if (data.success) {
-                                    // Sucesso
-                                    const alertDiv = document.createElement('div');
-                                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
-                                    alertDiv.innerHTML = `
-                                        <strong>✅ Sucesso!</strong> ${data.message}<br>
-                                        <small><strong>ID Original:</strong> ${data.data.identificador} | <strong>ID Golden:</strong> ${data.data.golden_id}</small><br>
-                                        <small><strong>Salvo em:</strong> ${new Date().toLocaleString('pt-BR')}</small>
+          // Limpa alertas anteriores
+          const alertasAnteriores = document.querySelectorAll(
+            "#editEquipModal .alert"
+          );
+          alertasAnteriores.forEach((alerta) => alerta.remove());
+
+          if (isAssetsControls) {
+            console.log("🔄 Fazendo PUT para AssetsControls via backend...");
+            console.log("🔗 URL:", `/api/assetscontrols/${dados.unitnumber}/`);
+
+            // Mostra o ID que será usado na Golden (últimos 6 dígitos)
+            const goldenId = dados.unitnumber.slice(-6);
+            console.log(`🔧 ID original: ${dados.unitnumber}`);
+            console.log(`🔧 ID para Golden: ${goldenId}`);
+
+            fetch(`/api/assetscontrols/${dados.unitnumber}/`, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken"),
+              },
+              body: JSON.stringify({
+                bl: dados.bl,
+                container: dados.container,
+                destino: dados.destino,
+                lacre_inn: dados.lacre_inn,
+                lacre: dados.lacre,
+              }),
+            })
+              .then((response) => {
+                console.log("📡 Resposta AssetsControls:", response.status);
+                console.log("📡 Headers:", response.headers);
+                return response.json();
+              })
+              .then((data) => {
+                console.log("📄 Dados da resposta:", data);
+
+                // Restaura botão
+                salvarBtn.innerHTML = originalText;
+                salvarBtn.disabled = false;
+
+                if (data.success) {
+                  // Sucesso
+                  const alertDiv = document.createElement("div");
+                  alertDiv.className =
+                    "alert alert-success alert-dismissible fade show";
+                  alertDiv.innerHTML = `
+                                        <strong>✅ Sucesso!</strong> ${
+                                          data.message
+                                        }<br>
+                                        <small><strong>ID Original:</strong> ${
+                                          data.data.identificador
+                                        } | <strong>ID Golden:</strong> ${
+                    data.data.golden_id
+                  }</small><br>
+                                        <small><strong>Salvo em:</strong> ${new Date().toLocaleString(
+                                          "pt-BR"
+                                        )}</small>
                                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                                     `;
-                                    document.querySelector('#editEquipModal .modal-body').insertBefore(alertDiv, document.querySelector('#editEquipModal .modal-body').firstChild);
-                                    
-                                    // Atualiza a linha da tabela
-                                    row.dataset.bl = dados.bl;
-                                    row.dataset.container = dados.container;
-                                    row.dataset.destino = dados.destino;
-                                    row.dataset.lacre_inn = dados.lacre_inn;
-                                    row.dataset.lacre = dados.lacre;
-                                    row.querySelector('.bl-cell').textContent = dados.bl || 'N/A';
-                                    row.querySelector('.container-cell').textContent = dados.container || 'N/A';
-                                    row.querySelector('.destino-cell').textContent = dados.destino || 'N/A';
-                                    row.querySelector('.lacre-inn-cell').textContent = dados.lacre_inn || 'N/A';
-                                    row.querySelector('.lacre-cell').textContent = dados.lacre || 'N/A';
-                                    
-                                    // Adiciona classe de destaque temporário
-                                    row.classList.add('table-success');
-                                    setTimeout(() => {
-                                        row.classList.remove('table-success');
-                                    }, 3000);
-                                    
-                                    // Registra no histórico local (opcional)
-                                    registrarHistoricoLocal(dados.unitnumber, 'AssetsControls', dados);
-                                    
-                                } else {
-                                    // Erro
-                                    const alertDiv = document.createElement('div');
-                                    alertDiv.className = 'alert alert-danger alert-dismissible fade show';
-                                    alertDiv.innerHTML = `
-                                        <strong>❌ Erro!</strong> ${data.error || 'Erro ao salvar dados.'}<br>
-                                        <small><strong>Tentativa em:</strong> ${new Date().toLocaleString('pt-BR')}</small>
+                  document
+                    .querySelector("#editEquipModal .modal-body")
+                    .insertBefore(
+                      alertDiv,
+                      document.querySelector("#editEquipModal .modal-body")
+                        .firstChild
+                    );
+
+                  // Atualiza a linha da tabela
+                  row.dataset.bl = dados.bl;
+                  row.dataset.container = dados.container;
+                  row.dataset.destino = dados.destino;
+                  row.dataset.lacre_inn = dados.lacre_inn;
+                  row.dataset.lacre = dados.lacre;
+                  row.querySelector(".bl-cell").textContent = dados.bl || "N/A";
+                  row.querySelector(".container-cell").textContent =
+                    dados.container || "N/A";
+                  row.querySelector(".destino-cell").textContent =
+                    dados.destino || "N/A";
+                  row.querySelector(".lacre-inn-cell").textContent =
+                    dados.lacre_inn || "N/A";
+                  row.querySelector(".lacre-cell").textContent =
+                    dados.lacre || "N/A";
+
+                  // Adiciona classe de destaque temporário
+                  row.classList.add("table-success");
+                  setTimeout(() => {
+                    row.classList.remove("table-success");
+                  }, 3000);
+
+                  // Registra no histórico local (opcional)
+                  registrarHistoricoLocal(
+                    dados.unitnumber,
+                    "AssetsControls",
+                    dados
+                  );
+                } else {
+                  // Erro
+                  const alertDiv = document.createElement("div");
+                  alertDiv.className =
+                    "alert alert-danger alert-dismissible fade show";
+                  alertDiv.innerHTML = `
+                                        <strong>❌ Erro!</strong> ${
+                                          data.error || "Erro ao salvar dados."
+                                        }<br>
+                                        <small><strong>Tentativa em:</strong> ${new Date().toLocaleString(
+                                          "pt-BR"
+                                        )}</small>
                                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                                     `;
-                                    document.querySelector('#editEquipModal .modal-body').insertBefore(alertDiv, document.querySelector('#editEquipModal .modal-body').firstChild);
-                                }
-                            })
-                            .catch(error => {
-                                console.log('❌ Erro AssetsControls:', error);
-                                
-                                // Restaura botão
-                                salvarBtn.innerHTML = originalText;
-                                salvarBtn.disabled = false;
-                                
-                                const alertDiv = document.createElement('div');
-                                alertDiv.className = 'alert alert-danger alert-dismissible fade show';
-                                alertDiv.innerHTML = `
+                  document
+                    .querySelector("#editEquipModal .modal-body")
+                    .insertBefore(
+                      alertDiv,
+                      document.querySelector("#editEquipModal .modal-body")
+                        .firstChild
+                    );
+                }
+              })
+              .catch((error) => {
+                console.log("❌ Erro AssetsControls:", error);
+
+                // Restaura botão
+                salvarBtn.innerHTML = originalText;
+                salvarBtn.disabled = false;
+
+                const alertDiv = document.createElement("div");
+                alertDiv.className =
+                  "alert alert-danger alert-dismissible fade show";
+                alertDiv.innerHTML = `
                                     <strong>❌ Erro de Conexão!</strong> Erro ao conectar com o servidor.<br>
-                                    <small><strong>Detalhes:</strong> ${error.message}</small><br>
-                                    <small><strong>Tentativa em:</strong> ${new Date().toLocaleString('pt-BR')}</small>
+                                    <small><strong>Detalhes:</strong> ${
+                                      error.message
+                                    }</small><br>
+                                    <small><strong>Tentativa em:</strong> ${new Date().toLocaleString(
+                                      "pt-BR"
+                                    )}</small>
                                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                                 `;
-                                document.querySelector('#editEquipModal .modal-body').insertBefore(alertDiv, document.querySelector('#editEquipModal .modal-body').firstChild);
-                            });
-                        } else {
-                            console.log('🔄 Fazendo PUT para T42 via backend...');
-                            console.log('🔗 URL:', `/api/t42/${dados.unitnumber}/`);
-                            
-                            fetch(`/api/t42/${dados.unitnumber}/`, {
-                                method: 'PUT',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': getCookie('csrftoken')
-                                },
-                                body: JSON.stringify({
-                                    bl: dados.bl,
-                                    container: dados.container,
-                                    destino: dados.destino,
-                                    lacre_inn: dados.lacre_inn,
-                                    lacre: dados.lacre
-                                })
-                            })
-                            .then(response => {
-                                console.log('📡 Resposta T42:', response.status);
-                                console.log('📡 Headers:', response.headers);
-                                return response.json();
-                            })
-                            .then(data => {
-                                console.log('📄 Dados da resposta:', data);
-                                const modalAlert = document.getElementById('modalAlert');
-                                
-                                // Restaura botão
-                                salvarBtn.innerHTML = originalText;
-                                salvarBtn.disabled = false;
-                                
-                                if (data.success) {
-                                    // Sucesso
-                                    console.log("✅ T42 atualizado com sucesso");
-                                    // Atualiza a linha da tabela
-                                    row.dataset.bl = dados.bl;
-                                    row.dataset.container = dados.container;
-                                    row.dataset.destino = dados.destino;
-                                    row.dataset.lacre_inn = dados.lacre_inn;
-                                    row.dataset.lacre = dados.lacre;
-                                    row.querySelector('.bl-cell').textContent = dados.bl || 'N/A';
-                                    row.querySelector('.container-cell').textContent = dados.container || 'N/A';
-                                    row.querySelector('.destino-cell').textContent = dados.destino || 'N/A';
-                                    row.querySelector('.lacre-inn-cell').textContent = dados.lacre_inn || 'N/A';
-                                    row.querySelector('.lacre-cell').textContent = dados.lacre || 'N/A';
+                document
+                  .querySelector("#editEquipModal .modal-body")
+                  .insertBefore(
+                    alertDiv,
+                    document.querySelector("#editEquipModal .modal-body")
+                      .firstChild
+                  );
+              });
+          } else {
+            console.log("🔄 Fazendo PUT para T42 via backend...");
+            console.log("🔗 URL:", `/api/t42/${dados.unitnumber}/`);
 
-                                    // Adiciona classe de destaque temporário
-                                    row.classList.add('table-success');
-                                    setTimeout(() => {
-                                        row.classList.remove('table-success');
-                                    }, 3000);
+            fetch(`/api/t42/${dados.unitnumber}/`, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken"),
+              },
+              body: JSON.stringify({
+                bl: dados.bl,
+                container: dados.container,
+                destino: dados.destino,
+                lacre_inn: dados.lacre_inn,
+                lacre: dados.lacre,
+              }),
+            })
+              .then((response) => {
+                console.log("📡 Resposta T42:", response.status);
+                console.log("📡 Headers:", response.headers);
+                return response.json();
+              })
+              .then((data) => {
+                console.log("📄 Dados da resposta:", data);
+                const modalAlert = document.getElementById("modalAlert");
 
-                                    modalAlert.innerHTML = `
+                // Restaura botão
+                salvarBtn.innerHTML = originalText;
+                salvarBtn.disabled = false;
+
+                if (data.success) {
+                  // Sucesso
+                  console.log("✅ T42 atualizado com sucesso");
+                  // Atualiza a linha da tabela
+                  row.dataset.bl = dados.bl;
+                  row.dataset.container = dados.container;
+                  row.dataset.destino = dados.destino;
+                  row.dataset.lacre_inn = dados.lacre_inn;
+                  row.dataset.lacre = dados.lacre;
+                  row.querySelector(".bl-cell").textContent = dados.bl || "N/A";
+                  row.querySelector(".container-cell").textContent =
+                    dados.container || "N/A";
+                  row.querySelector(".destino-cell").textContent =
+                    dados.destino || "N/A";
+                  row.querySelector(".lacre-inn-cell").textContent =
+                    dados.lacre_inn || "N/A";
+                  row.querySelector(".lacre-cell").textContent =
+                    dados.lacre || "N/A";
+
+                  // Adiciona classe de destaque temporário
+                  row.classList.add("table-success");
+                  setTimeout(() => {
+                    row.classList.remove("table-success");
+                  }, 3000);
+
+                  modalAlert.innerHTML = `
                                         <div class='alert alert-success alert-dismissible fade show' role='alert'>
-                                            <strong>✅ Sucesso!</strong> ${data.message}<br>
-                                            <small><strong>Salvo em:</strong> ${new Date().toLocaleString('pt-BR')}</small>
+                                            <strong>✅ Sucesso!</strong> ${
+                                              data.message
+                                            }<br>
+                                            <small><strong>Salvo em:</strong> ${new Date().toLocaleString(
+                                              "pt-BR"
+                                            )}</small>
                                             <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button>
                                         </div>
                                     `;
-                                    
-                                    // Registra no histórico local (opcional)
-                                    registrarHistoricoLocal(dados.unitnumber, 'T42', dados);
-                                    
-                                } else {
-                                    // Erro
-                                    console.log("❌ Erro T42:", data);
-                                    modalAlert.innerHTML = `
+
+                  // Registra no histórico local (opcional)
+                  registrarHistoricoLocal(dados.unitnumber, "T42", dados);
+                } else {
+                  // Erro
+                  console.log("❌ Erro T42:", data);
+                  modalAlert.innerHTML = `
                                         <div class='alert alert-danger alert-dismissible fade show' role='alert'>
-                                            <strong>❌ Erro!</strong> ${data.error || 'Erro ao salvar dados.'}<br>
-                                            <small><strong>Tentativa em:</strong> ${new Date().toLocaleString('pt-BR')}</small>
+                                            <strong>❌ Erro!</strong> ${
+                                              data.error ||
+                                              "Erro ao salvar dados."
+                                            }<br>
+                                            <small><strong>Tentativa em:</strong> ${new Date().toLocaleString(
+                                              "pt-BR"
+                                            )}</small>
                                             <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button>
                                         </div>
                                     `;
-                                }
+                }
 
-                                modalAlert.style.display = 'block';
-                                setTimeout(() => { modalAlert.style.display = 'none'; }, 8000);
+                modalAlert.style.display = "block";
+                setTimeout(() => {
+                  modalAlert.style.display = "none";
+                }, 8000);
 
-                                hideModal('editEquipModal');
-                            })
-                            .catch(error => {
-                                console.log('❌ Erro T42:', error);
-                                
-                                // Restaura botão
-                                salvarBtn.innerHTML = originalText;
-                                salvarBtn.disabled = false;
-                                
-                                const modalAlert = document.getElementById('modalAlert');
-                                modalAlert.innerHTML = `
+                hideModal("editEquipModal");
+              })
+              .catch((error) => {
+                console.log("❌ Erro T42:", error);
+
+                // Restaura botão
+                salvarBtn.innerHTML = originalText;
+                salvarBtn.disabled = false;
+
+                const modalAlert = document.getElementById("modalAlert");
+                modalAlert.innerHTML = `
                                     <div class='alert alert-danger alert-dismissible fade show' role='alert'>
                                         <strong>❌ Erro de Conexão!</strong> Erro ao conectar com o servidor.<br>
-                                        <small><strong>Detalhes:</strong> ${error.message}</small><br>
-                                        <small><strong>Tentativa em:</strong> ${new Date().toLocaleString('pt-BR')}</small>
+                                        <small><strong>Detalhes:</strong> ${
+                                          error.message
+                                        }</small><br>
+                                        <small><strong>Tentativa em:</strong> ${new Date().toLocaleString(
+                                          "pt-BR"
+                                        )}</small>
                                         <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Fechar'></button>
                                     </div>
                                 `;
-                                modalAlert.style.display = 'block';
-                                setTimeout(() => { modalAlert.style.display = 'none'; }, 8000);
-                            });
-                        }
-                    } else {
-                        console.log("❌ Row index não encontrado");
-                        // Restaura botão
-                        salvarBtn.innerHTML = originalText;
-                        salvarBtn.disabled = false;
-                    }
-                };
-            } else {
-                console.log("❌ Botão salvar NÃO encontrado");
-            }
+                modalAlert.style.display = "block";
+                setTimeout(() => {
+                  modalAlert.style.display = "none";
+                }, 8000);
+              });
+          }
+        } else {
+          console.log("❌ Row index não encontrado");
+          // Restaura botão
+          salvarBtn.innerHTML = originalText;
+          salvarBtn.disabled = false;
+        }
+      };
+    } else {
+      console.log("❌ Botão salvar NÃO encontrado");
+    }
+  });
+
+  // Função para registrar histórico local (opcional)
+  function registrarHistoricoLocal(unitId, tipo, dados) {
+    try {
+      const historico = JSON.parse(
+        localStorage.getItem("historico_alteracoes") || "[]"
+      );
+      const registro = {
+        unitId: unitId,
+        tipo: tipo,
+        dados: dados,
+        timestamp: new Date().toISOString(),
+        usuario: "{{ user.username|escapejs }}",
+      };
+
+      historico.unshift(registro); // Adiciona no início
+
+      // Mantém apenas os últimos 50 registros
+      if (historico.length > 50) {
+        historico.splice(50);
+      }
+
+      localStorage.setItem("historico_alteracoes", JSON.stringify(historico));
+      console.log("📝 Histórico local registrado:", registro);
+    } catch (error) {
+      console.log("⚠️ Erro ao registrar histórico local:", error);
+    }
+  }
+
+  // Função para limpar histórico local
+  function limparHistoricoLocal() {
+    try {
+      localStorage.removeItem("historico_alteracoes");
+      console.log("🗑️ Histórico local limpo");
+    } catch (error) {
+      console.log("⚠️ Erro ao limpar histórico local:", error);
+    }
+  }
+
+  // Event listener para limpar modais automaticamente
+  document.addEventListener("DOMContentLoaded", function () {
+    // Remove qualquer backdrop residual ao carregar a página
+    limparFundoCinza();
+
+    // Listener para todos os modais da página
+    const modais = document.querySelectorAll(".modal");
+    modais.forEach((modal) => {
+      // Quando modal é fechado
+      modal.addEventListener("hidden.bs.modal", function () {
+        limparFundoCinza();
+      });
+
+      // Quando modal é aberto
+      modal.addEventListener("shown.bs.modal", function () {
+        limparFundoCinza();
+      });
+
+      // Quando modal está sendo fechado
+      modal.addEventListener("hide.bs.modal", function () {
+        setTimeout(limparFundoCinza, 50);
+      });
+    });
+
+    // Listener para tecla ESC fechar modais
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        const openModals = document.querySelectorAll(".modal.show");
+        openModals.forEach((modal) => {
+          const modalInstance = bootstrap.Modal.getInstance(modal);
+          if (modalInstance) modalInstance.hide();
         });
+        setTimeout(limparFundoCinza, 100);
+      }
+    });
 
-        // Função para registrar histórico local (opcional)
-        function registrarHistoricoLocal(unitId, tipo, dados) {
-            try {
-                const historico = JSON.parse(localStorage.getItem('historico_alteracoes') || '[]');
-                const registro = {
-                    unitId: unitId,
-                    tipo: tipo,
-                    dados: dados,
-                    timestamp: new Date().toISOString(),
-                    usuario: '{{ user.username|escapejs }}'
-                };
-                
-                historico.unshift(registro); // Adiciona no início
-                
-                // Mantém apenas os últimos 50 registros
-                if (historico.length > 50) {
-                    historico.splice(50);
+    // Listener para cliques no botão X dos modais
+    document.querySelectorAll('[data-bs-dismiss="modal"]').forEach((btn) => {
+      btn.addEventListener("click", function () {
+        setTimeout(limparFundoCinza, 100);
+      });
+    });
+
+    // Observador para remover backdrops automaticamente
+    const observer = new MutationObserver(function (mutations) {
+      mutations.forEach(function (mutation) {
+        if (mutation.type === "childList") {
+          mutation.addedNodes.forEach(function (node) {
+            if (
+              node.nodeType === 1 &&
+              node.classList &&
+              node.classList.contains("modal-backdrop")
+            ) {
+              setTimeout(() => {
+                if (node.parentNode) {
+                  node.remove();
                 }
-                
-                localStorage.setItem('historico_alteracoes', JSON.stringify(historico));
-                console.log('📝 Histórico local registrado:', registro);
-            } catch (error) {
-                console.log('⚠️ Erro ao registrar histórico local:', error);
+              }, 100);
             }
+          });
+        }
+      });
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  });
+
+  // Função para formatar data no formato dd/mm/aaaa
+  function formatarData(dataString) {
+    if (!dataString) return null;
+
+    try {
+      console.log("Formatando data original:", dataString);
+
+      // Se já é uma string de data válida
+      if (typeof dataString === "string") {
+        // Remove caracteres especiais mas mantém estrutura
+        const dataLimpa = dataString.trim();
+
+        // Se parece ser um timestamp (só números)
+        if (/^\d+$/.test(dataLimpa)) {
+          // Verifica se é formato YYYYMMDDHHMMSS (14 dígitos)
+          if (dataLimpa.length === 14) {
+            const ano = dataLimpa.substring(0, 4);
+            const mes = dataLimpa.substring(4, 6);
+            const dia = dataLimpa.substring(6, 8);
+            const hora = dataLimpa.substring(8, 10);
+            const minuto = dataLimpa.substring(10, 12);
+            const segundo = dataLimpa.substring(12, 14);
+
+            console.log(
+              "Data parseada (YYYYMMDDHHMMSS):",
+              `${ano}-${mes}-${dia} ${hora}:${minuto}:${segundo}`
+            );
+            return `${dia}/${mes}/${ano}`;
+          }
+
+          // Se é um timestamp real (10-13 dígitos)
+          if (dataLimpa.length >= 10 && dataLimpa.length <= 13) {
+            const timestamp = parseInt(dataLimpa);
+            // Se é um timestamp em segundos, converte para milissegundos
+            const timestampMs =
+              timestamp < 10000000000 ? timestamp * 1000 : timestamp;
+            const data = new Date(timestampMs);
+
+            if (!isNaN(data.getTime())) {
+              const dia = String(data.getDate()).padStart(2, "0");
+              const mes = String(data.getMonth() + 1).padStart(2, "0");
+              const ano = data.getFullYear();
+              console.log(
+                "Data formatada (timestamp):",
+                `${dia}/${mes}/${ano}`
+              );
+              return `${dia}/${mes}/${ano}`;
+            }
+          }
         }
 
-        // Função para limpar histórico local
-        function limparHistoricoLocal() {
-            try {
-                localStorage.removeItem('historico_alteracoes');
-                console.log('🗑️ Histórico local limpo');
-            } catch (error) {
-                console.log('⚠️ Erro ao limpar histórico local:', error);
-            }
+        // Tenta como data ISO ou similar
+        const data = new Date(dataLimpa);
+        if (!isNaN(data.getTime())) {
+          const dia = String(data.getDate()).padStart(2, "0");
+          const mes = String(data.getMonth() + 1).padStart(2, "0");
+          const ano = data.getFullYear();
+          console.log("Data formatada (ISO):", `${dia}/${mes}/${ano}`);
+          return `${dia}/${mes}/${ano}`;
         }
+      } else if (typeof dataString === "number") {
+        // Se é um número (timestamp)
+        const timestampMs =
+          dataString < 10000000000 ? dataString * 1000 : dataString;
+        const data = new Date(timestampMs);
 
-        // Event listener para limpar modais automaticamente
-        document.addEventListener('DOMContentLoaded', function() {
-            // Remove qualquer backdrop residual ao carregar a página
-            limparFundoCinza();
-            
-            // Listener para todos os modais da página
-            const modais = document.querySelectorAll('.modal');
-            modais.forEach(modal => {
-                // Quando modal é fechado
-                modal.addEventListener('hidden.bs.modal', function() {
-                    limparFundoCinza();
-                });
-                
-                // Quando modal é aberto
-                modal.addEventListener('shown.bs.modal', function() {
-                    limparFundoCinza();
-                });
-                
-                // Quando modal está sendo fechado
-                modal.addEventListener('hide.bs.modal', function() {
-                    setTimeout(limparFundoCinza, 50);
-                });
+        if (!isNaN(data.getTime())) {
+          const dia = String(data.getDate()).padStart(2, "0");
+          const mes = String(data.getMonth() + 1).padStart(2, "0");
+          const ano = data.getFullYear();
+          console.log("Data formatada (number):", `${dia}/${mes}/${ano}`);
+          return `${dia}/${mes}/${ano}`;
+        }
+      }
+
+      console.log("Não foi possível formatar a data:", dataString);
+      return null;
+    } catch (error) {
+      console.log("Erro ao formatar data:", error, dataString);
+      return null;
+    }
+  }
+
+  // Função para formatar data e hora juntos
+  function formatarDataHora(dataString) {
+    if (!dataString) return null;
+    try {
+      // Se vier no formato YYYYMMDDHHMMSS
+      if (typeof dataString === "string" && dataString.length === 14) {
+        const ano = dataString.substring(0, 4);
+        const mes = dataString.substring(4, 6);
+        const dia = dataString.substring(6, 8);
+        const hora = dataString.substring(8, 10);
+        const minuto = dataString.substring(10, 12);
+        return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
+      }
+      // Se vier só data (YYYYMMDD)
+      if (typeof dataString === "string" && dataString.length === 8) {
+        const ano = dataString.substring(0, 4);
+        const mes = dataString.substring(4, 6);
+        const dia = dataString.substring(6, 8);
+        return `${dia}/${mes}/${ano} 00:00`;
+      }
+      // Se vier no formato ISO (2025-07-07T13:09:39)
+      if (typeof dataString === "string" && dataString.includes("T")) {
+        const d = new Date(dataString);
+        if (!isNaN(d.getTime())) {
+          const dia = String(d.getDate()).padStart(2, "0");
+          const mes = String(d.getMonth() + 1).padStart(2, "0");
+          const ano = d.getFullYear();
+          const hora = String(d.getHours()).padStart(2, "0");
+          const minuto = String(d.getMinutes()).padStart(2, "0");
+          return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
+        }
+      }
+      // fallback para formatarData
+      return formatarData(dataString);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Função para gerar histórico PDF
+  function gerarHistoricoPDF() {
+    const unitnumber = document.getElementById("searchInput").value.trim();
+
+    if (!unitnumber) {
+      alert("Digite um ID de equipamento primeiro!");
+      return;
+    }
+
+    // Verifica se é T42
+    const isAssetsControlsId = /^\d{12}$/.test(unitnumber);
+    if (isAssetsControlsId) {
+      alert("Histórico disponível apenas para equipamentos T42!");
+      return;
+    }
+
+    // Calcula datas (14 dias atrás até hoje)
+    const hoje = new Date();
+    const dataInicio = new Date();
+    dataInicio.setDate(hoje.getDate() - 14);
+
+    // Formata datas no formato YYYYMMDDHHMMSS
+    const start = formatarDataParaAPI(dataInicio) + "000000";
+    const end = formatarDataParaAPI(hoje) + "235959";
+
+    console.log("Gerando histórico para:", unitnumber);
+    console.log("Período:", start, "até", end);
+
+    // Mostra loading
+    const btnHistorico = document.getElementById("btnHistorico");
+    const originalText = btnHistorico.innerHTML;
+    btnHistorico.innerHTML =
+      '<i class="fas fa-spinner fa-spin me-2"></i>Gerando PDF...';
+    btnHistorico.disabled = true;
+
+    // Faz a requisição para o backend
+    fetch("/api/gerar-historico-pdf/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie("csrftoken"),
+      },
+      body: JSON.stringify({
+        unitnumber: unitnumber,
+        start: start,
+        end: end,
+      }),
+    })
+      .then((response) => {
+        if (response.ok) {
+          return response.blob();
+        }
+        throw new Error("Erro ao gerar PDF");
+      })
+      .then((blob) => {
+        // Cria link para download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `historico_${unitnumber}_${formatarDataParaAPI(hoje)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        console.log("PDF gerado com sucesso!");
+      })
+      .catch((error) => {
+        console.error("Erro:", error);
+        alert("Erro ao gerar PDF: " + error.message);
+      })
+      .finally(() => {
+        // Restaura botão
+        btnHistorico.innerHTML = originalText;
+        btnHistorico.disabled = false;
+      });
+  }
+
+  // Função para formatar data para API (YYYYMMDD)
+  function formatarDataParaAPI(data) {
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, "0");
+    const dia = String(data.getDate()).padStart(2, "0");
+    return `${ano}${mes}${dia}`;
+  }
+
+  // Função para obter cookie CSRF
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === name + "=") {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // Função para buscar posições dos equipamentos extras
+  function buscarPosicoesFedexAssetsControls() {
+    if (!usuarioFedex) return;
+    IDS_EQUIPAMENTOS_FED_EX.forEach((id) => {
+      fetch(`/api/get_assetscontrols_data/?id=${id}`)
+        .then((resp) => resp.json())
+        .then((data) => {
+          if (data && data.FObject && data.FObject.length > 0) {
+            const eq = data.FObject[0];
+            // Remove marcador antigo se existir
+            if (fedexMarkers[id]) {
+              map.removeLayer(fedexMarkers[id]);
+            }
+            // Adiciona novo marcador
+            const fedexIcon = L.icon({
+              iconUrl:
+                "https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/images/marker-icon.png", // ou use um ícone customizado
+              iconSize: [20, 32], // menor que o padrão
+              iconAnchor: [10, 32],
+              popupAnchor: [0, -28],
             });
-            
-            // Listener para tecla ESC fechar modais
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    const openModals = document.querySelectorAll('.modal.show');
-                    openModals.forEach(modal => {
-                        const modalInstance = bootstrap.Modal.getInstance(modal);
-                        if (modalInstance) modalInstance.hide();
-                    });
-                    setTimeout(limparFundoCinza, 100);
-                }
-            });
-            
-            // Listener para cliques no botão X dos modais
-            document.querySelectorAll('[data-bs-dismiss="modal"]').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    setTimeout(limparFundoCinza, 100);
-                });
-            });
-            
-            // Observador para remover backdrops automaticamente
-            const observer = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.type === 'childList') {
-                        mutation.addedNodes.forEach(function(node) {
-                            if (node.nodeType === 1 && node.classList && node.classList.contains('modal-backdrop')) {
-                                setTimeout(() => {
-                                    if (node.parentNode) {
-                                        node.remove();
-                                    }
-                                }, 100);
-                            }
-                        });
-                    }
-                });
-            });
-            
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
+            fedexMarkers[id] = L.marker([eq.FLatitude, eq.FLongitude], {
+              icon: fedexIcon,
+            })
+              .addTo(map)
+              .bindPopup(
+                `<b>Fedex Equipamento ${id}</b><br>Lat: ${eq.FLatitude}<br>Lon: ${eq.FLongitude}`
+              );
+          }
         });
+    });
+  }
 
-        // Função para formatar data no formato dd/mm/aaaa
-        function formatarData(dataString) {
-            if (!dataString) return null;
-            
-            try {
-                console.log('Formatando data original:', dataString);
-                
-                // Se já é uma string de data válida
-                if (typeof dataString === 'string') {
-                    // Remove caracteres especiais mas mantém estrutura
-                    const dataLimpa = dataString.trim();
-                    
-                    // Se parece ser um timestamp (só números)
-                    if (/^\d+$/.test(dataLimpa)) {
-                        // Verifica se é formato YYYYMMDDHHMMSS (14 dígitos)
-                        if (dataLimpa.length === 14) {
-                            const ano = dataLimpa.substring(0, 4);
-                            const mes = dataLimpa.substring(4, 6);
-                            const dia = dataLimpa.substring(6, 8);
-                            const hora = dataLimpa.substring(8, 10);
-                            const minuto = dataLimpa.substring(10, 12);
-                            const segundo = dataLimpa.substring(12, 14);
-                            
-                            console.log('Data parseada (YYYYMMDDHHMMSS):', `${ano}-${mes}-${dia} ${hora}:${minuto}:${segundo}`);
-                            return `${dia}/${mes}/${ano}`;
-                        }
-                        
-                        // Se é um timestamp real (10-13 dígitos)
-                        if (dataLimpa.length >= 10 && dataLimpa.length <= 13) {
-                            const timestamp = parseInt(dataLimpa);
-                            // Se é um timestamp em segundos, converte para milissegundos
-                            const timestampMs = timestamp < 10000000000 ? timestamp * 1000 : timestamp;
-                            const data = new Date(timestampMs);
-                            
-                            if (!isNaN(data.getTime())) {
-                                const dia = String(data.getDate()).padStart(2, '0');
-                                const mes = String(data.getMonth() + 1).padStart(2, '0');
-                                const ano = data.getFullYear();
-                                console.log('Data formatada (timestamp):', `${dia}/${mes}/${ano}`);
-                                return `${dia}/${mes}/${ano}`;
-                            }
-                        }
-                    }
-                    
-                    // Tenta como data ISO ou similar
-                    const data = new Date(dataLimpa);
-                    if (!isNaN(data.getTime())) {
-                        const dia = String(data.getDate()).padStart(2, '0');
-                        const mes = String(data.getMonth() + 1).padStart(2, '0');
-                        const ano = data.getFullYear();
-                        console.log('Data formatada (ISO):', `${dia}/${mes}/${ano}`);
-                        return `${dia}/${mes}/${ano}`;
-                    }
-                } else if (typeof dataString === 'number') {
-                    // Se é um número (timestamp)
-                    const timestampMs = dataString < 10000000000 ? dataString * 1000 : dataString;
-                    const data = new Date(timestampMs);
-                    
-                    if (!isNaN(data.getTime())) {
-                        const dia = String(data.getDate()).padStart(2, '0');
-                        const mes = String(data.getMonth() + 1).padStart(2, '0');
-                        const ano = data.getFullYear();
-                        console.log('Data formatada (number):', `${dia}/${mes}/${ano}`);
-                        return `${dia}/${mes}/${ano}`;
-                    }
-                }
-                
-                console.log('Não foi possível formatar a data:', dataString);
-                return null;
-            } catch (error) {
-                console.log('Erro ao formatar data:', error, dataString);
-                return null;
-            }
-        }
+  // Atualiza a cada 10 segundos
+  if (usuarioFedex) {
+    buscarPosicoesFedexAssetsControls();
+    setInterval(buscarPosicoesFedexAssetsControls, 10000);
+  }
 
-        // Função para formatar data e hora juntos
-        function formatarDataHora(dataString) {
-            if (!dataString) return null;
-            try {
-                // Se vier no formato YYYYMMDDHHMMSS
-                if (typeof dataString === 'string' && dataString.length === 14) {
-                    const ano = dataString.substring(0, 4);
-                    const mes = dataString.substring(4, 6);
-                    const dia = dataString.substring(6, 8);
-                    const hora = dataString.substring(8, 10);
-                    const minuto = dataString.substring(10, 12);
-                    return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
-                }
-                // Se vier só data (YYYYMMDD)
-                if (typeof dataString === 'string' && dataString.length === 8) {
-                    const ano = dataString.substring(0, 4);
-                    const mes = dataString.substring(4, 6);
-                    const dia = dataString.substring(6, 8);
-                    return `${dia}/${mes}/${ano} 00:00`;
-                }
-                // Se vier no formato ISO (2025-07-07T13:09:39)
-                if (typeof dataString === 'string' && dataString.includes('T')) {
-                    const d = new Date(dataString);
-                    if (!isNaN(d.getTime())) {
-                        const dia = String(d.getDate()).padStart(2, '0');
-                        const mes = String(d.getMonth() + 1).padStart(2, '0');
-                        const ano = d.getFullYear();
-                        const hora = String(d.getHours()).padStart(2, '0');
-                        const minuto = String(d.getMinutes()).padStart(2, '0');
-                        return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
-                    }
-                }
-                // fallback para formatarData
-                return formatarData(dataString);
-            } catch (e) {
-                return null;
-            }
-        }
+  // Quando filtrar, remova os marcadores Fedex
+  const originalFiltrarEquipamentos = filtrarEquipamentos;
+  filtrarEquipamentos = function () {
+    // Remove marcadores Fedex
+    Object.values(fedexMarkers).forEach((marker) => map.removeLayer(marker));
+    fedexMarkers = {};
+    // Chama o filtro original
+    originalFiltrarEquipamentos.apply(this, arguments);
+  };
 
-        // Função para gerar histórico PDF
-        function gerarHistoricoPDF() {
-            const unitnumber = document.getElementById("searchInput").value.trim();
-            
-            if (!unitnumber) {
-                alert('Digite um ID de equipamento primeiro!');
-                return;
-            }
-            
-            // Verifica se é T42
-            const isAssetsControlsId = /^\d{12}$/.test(unitnumber);
-            if (isAssetsControlsId) {
-                alert('Histórico disponível apenas para equipamentos T42!');
-                return;
-            }
-            
-            // Calcula datas (14 dias atrás até hoje)
-            const hoje = new Date();
-            const dataInicio = new Date();
-            dataInicio.setDate(hoje.getDate() - 14);
-            
-            // Formata datas no formato YYYYMMDDHHMMSS
-            const start = formatarDataParaAPI(dataInicio) + '000000';
-            const end = formatarDataParaAPI(hoje) + '235959';
-            
-            console.log('Gerando histórico para:', unitnumber);
-            console.log('Período:', start, 'até', end);
-            
-            // Mostra loading
-            const btnHistorico = document.getElementById('btnHistorico');
-            const originalText = btnHistorico.innerHTML;
-            btnHistorico.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Gerando PDF...';
-            btnHistorico.disabled = true;
-            
-            // Faz a requisição para o backend
-            fetch('/api/gerar-historico-pdf/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    unitnumber: unitnumber,
-                    start: start,
-                    end: end
-                })
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.blob();
-                }
-                throw new Error('Erro ao gerar PDF');
-            })
-            .then(blob => {
-                // Cria link para download
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `historico_${unitnumber}_${formatarDataParaAPI(hoje)}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                
-                console.log('PDF gerado com sucesso!');
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                alert('Erro ao gerar PDF: ' + error.message);
-            })
-            .finally(() => {
-                // Restaura botão
-                btnHistorico.innerHTML = originalText;
-                btnHistorico.disabled = false;
-            });
-        }
-        
-        // Função para formatar data para API (YYYYMMDD)
-        function formatarDataParaAPI(data) {
-            const ano = data.getFullYear();
-            const mes = String(data.getMonth() + 1).padStart(2, '0');
-            const dia = String(data.getDate()).padStart(2, '0');
-            return `${ano}${mes}${dia}`;
-        }
+  // Função para visualizar histórico de alterações
+  function visualizarHistorico() {
+    try {
+      const historico = JSON.parse(
+        localStorage.getItem("historico_alteracoes") || "[]"
+      );
+      const unitId = document.getElementById("modalUnitId").value;
 
-        // Função para obter cookie CSRF
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
+      // Filtra apenas alterações deste equipamento
+      const historicoEquipamento = historico.filter((h) => h.unitId === unitId);
 
-        // Função para buscar posições dos equipamentos extras
-        function buscarPosicoesFedexAssetsControls() {
-            if (!usuarioFedex) return;
-            IDS_EQUIPAMENTOS_FED_EX.forEach(id => {
-                fetch(`/api/get_assetscontrols_data/?id=${id}`)
-                    .then(resp => resp.json())
-                    .then(data => {
-                        if (data && data.FObject && data.FObject.length > 0) {
-                            const eq = data.FObject[0];
-                            // Remove marcador antigo se existir
-                            if (fedexMarkers[id]) {
-                                map.removeLayer(fedexMarkers[id]);
-                            }
-                            // Adiciona novo marcador
-                            const fedexIcon = L.icon({
-                                iconUrl: 'https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/images/marker-icon.png', // ou use um ícone customizado
-                                iconSize: [20, 32], // menor que o padrão
-                                iconAnchor: [10, 32],
-                                popupAnchor: [0, -28]
-                            });
-                            fedexMarkers[id] = L.marker([eq.FLatitude, eq.FLongitude], {icon: fedexIcon})
-                                .addTo(map)
-                                .bindPopup(`<b>Fedex Equipamento ${id}</b><br>Lat: ${eq.FLatitude}<br>Lon: ${eq.FLongitude}`);
-                        }
-                    });
-            });
-        }
-
-        // Atualiza a cada 10 segundos
-        if (usuarioFedex) {
-            buscarPosicoesFedexAssetsControls();
-            setInterval(buscarPosicoesFedexAssetsControls, 10000);
-        }
-
-        // Quando filtrar, remova os marcadores Fedex
-        const originalFiltrarEquipamentos = filtrarEquipamentos;
-        filtrarEquipamentos = function() {
-            // Remove marcadores Fedex
-            Object.values(fedexMarkers).forEach(marker => map.removeLayer(marker));
-            fedexMarkers = {};
-            // Chama o filtro original
-            originalFiltrarEquipamentos.apply(this, arguments);
-        };
-
-        // Função para visualizar histórico de alterações
-        function visualizarHistorico() {
-            try {
-                const historico = JSON.parse(localStorage.getItem('historico_alteracoes') || '[]');
-                const unitId = document.getElementById('modalUnitId').value;
-                
-                // Filtra apenas alterações deste equipamento
-                const historicoEquipamento = historico.filter(h => h.unitId === unitId);
-                
-                if (historicoEquipamento.length === 0) {
-                    const alertDiv = document.createElement('div');
-                    alertDiv.className = 'alert alert-info alert-dismissible fade show';
-                    alertDiv.innerHTML = `
+      if (historicoEquipamento.length === 0) {
+        const alertDiv = document.createElement("div");
+        alertDiv.className = "alert alert-info alert-dismissible fade show";
+        alertDiv.innerHTML = `
                         <strong>ℹ️ Nenhum histórico encontrado</strong><br>
                         <small>Não há alterações registradas para este equipamento.</small>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     `;
-                    document.querySelector('#editEquipModal .modal-body').insertBefore(alertDiv, document.querySelector('#editEquipModal .modal-body').firstChild);
-                    return;
-                }
-                
-                // Cria modal de histórico
-                const historicoModal = document.createElement('div');
-                historicoModal.className = 'modal fade';
-                historicoModal.id = 'historicoModal';
-                historicoModal.innerHTML = `
+        document
+          .querySelector("#editEquipModal .modal-body")
+          .insertBefore(
+            alertDiv,
+            document.querySelector("#editEquipModal .modal-body").firstChild
+          );
+        return;
+      }
+
+      // Cria modal de histórico
+      const historicoModal = document.createElement("div");
+      historicoModal.className = "modal fade";
+      historicoModal.id = "historicoModal";
+      historicoModal.innerHTML = `
                     <div class="modal-dialog modal-lg">
                         <div class="modal-content">
                             <div class="modal-header">
@@ -2085,18 +2461,42 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            ${historicoEquipamento.map(h => `
+                                            ${historicoEquipamento
+                                              .map(
+                                                (h) => `
                                                 <tr>
-                                                    <td><small>${new Date(h.timestamp).toLocaleString('pt-BR')}</small></td>
-                                                    <td><span class="badge bg-${h.tipo === 'T42' ? 'primary' : 'success'}">${h.tipo}</span></td>
-                                                    <td>${h.dados.bl || '-'}</td>
-                                                    <td>${h.dados.container || '-'}</td>
-                                                    <td>${h.dados.destino || '-'}</td>
-                                                    <td>${h.dados.lacre_inn || '-'}</td>
-                                                    <td>${h.dados.lacre || '-'}</td>
-                                                    <td><small>${h.usuario}</small></td>
+                                                    <td><small>${new Date(
+                                                      h.timestamp
+                                                    ).toLocaleString(
+                                                      "pt-BR"
+                                                    )}</small></td>
+                                                    <td><span class="badge bg-${
+                                                      h.tipo === "T42"
+                                                        ? "primary"
+                                                        : "success"
+                                                    }">${h.tipo}</span></td>
+                                                    <td>${
+                                                      h.dados.bl || "-"
+                                                    }</td>
+                                                    <td>${
+                                                      h.dados.container || "-"
+                                                    }</td>
+                                                    <td>${
+                                                      h.dados.destino || "-"
+                                                    }</td>
+                                                    <td>${
+                                                      h.dados.lacre_inn || "-"
+                                                    }</td>
+                                                    <td>${
+                                                      h.dados.lacre || "-"
+                                                    }</td>
+                                                    <td><small>${
+                                                      h.usuario
+                                                    }</small></td>
                                                 </tr>
-                                            `).join('')}
+                                            `
+                                              )
+                                              .join("")}
                                         </tbody>
                                     </table>
                                 </div>
@@ -2110,29 +2510,33 @@
                         </div>
                     </div>
                 `;
-                
-                // Adiciona ao body e mostra
-                document.body.appendChild(historicoModal);
-                const modal = new bootstrap.Modal(historicoModal);
-                modal.show();
-                
-                // Remove o modal do DOM quando fechado
-                historicoModal.addEventListener('hidden.bs.modal', function() {
-                    document.body.removeChild(historicoModal);
-                });
-                
-            } catch (error) {
-                console.log('⚠️ Erro ao visualizar histórico:', error);
-                const alertDiv = document.createElement('div');
-                alertDiv.className = 'alert alert-danger alert-dismissible fade show';
-                alertDiv.innerHTML = `
+
+      // Adiciona ao body e mostra
+      document.body.appendChild(historicoModal);
+      const modal = new bootstrap.Modal(historicoModal);
+      modal.show();
+
+      // Remove o modal do DOM quando fechado
+      historicoModal.addEventListener("hidden.bs.modal", function () {
+        document.body.removeChild(historicoModal);
+      });
+    } catch (error) {
+      console.log("⚠️ Erro ao visualizar histórico:", error);
+      const alertDiv = document.createElement("div");
+      alertDiv.className = "alert alert-danger alert-dismissible fade show";
+      alertDiv.innerHTML = `
                     <strong>❌ Erro!</strong> Erro ao carregar histórico.<br>
                     <small><strong>Detalhes:</strong> ${error.message}</small>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 `;
-                document.querySelector('#editEquipModal .modal-body').insertBefore(alertDiv, document.querySelector('#editEquipModal .modal-body').firstChild);
-            }
-        }
-    </script>
-    
+      document
+        .querySelector("#editEquipModal .modal-body")
+        .insertBefore(
+          alertDiv,
+          document.querySelector("#editEquipModal .modal-body").firstChild
+        );
+    }
+  }
+</script>
+
 {% endblock %}
