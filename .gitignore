@@ -47,6 +47,8 @@ venv.bak/
 .project
 .pydevproject
 
+xlsx-files/
+
 # ────────────── Arquivos de teste ─────────────────
 test_alerts.py
 test_powerbi_api.py

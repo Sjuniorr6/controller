@@ -4,7 +4,7 @@ from .models import altocafezalmodel, EventoTratado
 from .forms import AltocafezalModelForm
 import json
 from django.http import HttpResponse
-from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.pagesizes import letter, A4, landscape
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
@@ -32,6 +32,9 @@ from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView, LogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView
+import os
+from django.conf import settings
+from reportlab.platypus import Image, Spacer
 
 # Página inicial (apenas para usuários autenticados)
 class HomeView(LoginRequiredMixin, TemplateView):
@@ -1405,12 +1408,23 @@ from django.views.decorators.http import require_http_methods
 import json
 import requests
 from io import BytesIO
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.utils.timezone import now as tz_now
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+
+
+#ReportLab imports
+from reportlab.lib.pagesizes import landscape, A4
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle
+)    
+
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
+from reportlab.lib.units import inch, cm
+from reportlab.lib import colors
 
 # Configurações da API
 T42_API_URL = "https://mongol.brono.com/mongol/api.php"
@@ -1457,82 +1471,199 @@ def gerar_historico_pdf(request):
         resp.raise_for_status()
         records = resp.json()
 
+        #=================
+        #ESTILIZAÇÃO PDF
+        #=================
+
         # ambiente ReportLab
         buf = BytesIO()
-        doc = SimpleDocTemplate(buf, pagesize=A4,
-                                leftMargin=inch/2, rightMargin=inch/2,
-                                topMargin=inch/2, bottomMargin=inch/2)
-        styles = getSampleStyleSheet()
-        heading = ParagraphStyle('Heading', parent=styles['Heading2'], spaceAfter=6)
-        normal  = styles['Normal']
+        doc = SimpleDocTemplate(
+            buf,
+            pagesize=landscape(A4),
+            leftMargin=inch/2,
+            rightMargin=inch/2,
+            topMargin=inch/2,
+            bottomMargin=inch/2
+        )
 
-        elements = [Paragraph(f"Histórico do Equipamento {unit}", styles['Title']),
-                    Spacer(1, 12)]
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            "Title",
+            parent=styles["Title"],
+            alignment=1,
+            fontSize=16,
+            spaceAfter=12
+        )
+
+        subtitle_style = ParagraphStyle(
+            "Subtitle",
+            parent=styles["Normal"],
+            alignment=1,
+            fontSize=10,
+            textColor=colors.grey,
+            spaceAfter=18
+        )
+
+        elements = []
+
+        logo_path = os.path.join(settings.BASE_DIR, "static", "images", "goldensat.png")
+        logo = Image(logo_path, width=160, height=130)
+        logo.hAlign = 'CENTER'
+
+        elements.append(logo)
+        elements.append(Spacer(1, 20))
+
+        elements.append(Paragraph(f"Histórico Técnico - Equipamento {unit}", title_style))
+        elements.append(Paragraph("Últimos 14 dias", subtitle_style))
 
         if not isinstance(records, list) or not records:
-            elements.append(Paragraph("Nenhum registro encontrado nos últimos 14 dias.", normal))
-        else:
-            for rec in records:
-                # formata datas
-                dt_act = rec.get('datetime_actual', '')
-                dt_utc = rec.get('datetime_utc', '')
-                def fmt(dt):
-                    if isinstance(dt, str) and len(dt) >= 12:
-                        return f"{dt[:4]}/{dt[4:6]}/{dt[6:8]} {dt[8:10]}:{dt[10:12]}"
-                    return dt
+            elements.append(Paragraph("Nenhum registro encontrado.", styles["Normal"]))
+            doc.build(elements)
+            buf.seek(0)
+            return download_pdf(buf, unit)
 
-                # campos básicos
-                sv    = rec.get('software_version', '')
-                reason_code = rec.get('reason', '')
-                reason_txt  = REASON_MAP.get(reason_code, f"Código {reason_code}")
-                lon   = rec.get('longitude', '')
-                lat   = rec.get('latitude', '')
-                alt   = rec.get('altitude', '')
-                installed = "Sim" if rec.get('installed') else "Não"
-                door      = rec.get('door')
-                porta_txt = "Aberta" if door == 1 else "Fechada"
-                voltage   = rec.get('main_voltage')
-                bat_pct   = f"{max(0, min(100, int((voltage-3.5)/(4.17-3.5)*100)))}%" if voltage else "N/A"
-                temp      = rec.get('temperature', 'N/A')
-                light     = rec.get('light', 'N/A')
-                uncertainty = rec.get('uncertainty', 'N/A')
+        # -------------------------
+        # MONTAGEM DA TABELA
+        # -------------------------
 
-                # seção Detalhes
-                elements.append(Paragraph("Detalhes", heading))
-                elements.append(Paragraph(f"- Recebida: {fmt(dt_act)}", normal))
-                elements.append(Paragraph(f"- Razão: {reason_txt}", normal))
-                elements.append(Paragraph(f"- Versão: {sv}", normal))
-                elements.append(Spacer(1, 6))
+        # Cabeçalho no padrão T42
+        header = [
+            "Time",
+            "Last Location",
+            "GPS",
+            "Installed",
+            "Button",
+            "Door",
+            "Main Power",
+            "Light",
+            "Temperature",
+            "Longitude",
+            "Latitude",
+        ]
 
-                # seção Localização
-                elements.append(Paragraph("Localização", heading))
-                elements.append(Paragraph(f"- Última posição válida: {fmt(dt_utc)}", normal))
-                elements.append(Paragraph(f"- Incerteza: {uncertainty}", normal))
-                elements.append(Paragraph(f"- Coordenadas: ({lon}, {lat})", normal))
-                elements.append(Paragraph(f"- Altitude: {alt} Metros", normal))
-                elements.append(Spacer(1, 6))
+        table_data = [header]
 
-                # seção Entrada/Saída
-                elements.append(Paragraph("Entrada/Saída", heading))
-                elements.append(Paragraph(f"- Instalado: {installed}", normal))
-                elements.append(Paragraph(f"- Porta: {porta_txt}", normal))
-                elements.append(Paragraph(f"- Bateria: {bat_pct} / {voltage}v", normal))
-                elements.append(Paragraph(f"- Temperatura: {temp}c", normal))
-                elements.append(Paragraph(f"- Luz: {light}", normal))
-                elements.append(Spacer(1, 12))
+        # Função para data
+        def fmt_dt(dt):
+            if isinstance(dt, str) and len(dt) >= 12:
+                return f"{dt[:4]}/{dt[4:6]}/{dt[6:8]} {dt[8:10]}:{dt[10:12]}"
+            return dt or ""
 
-        # finaliza PDF
+        # Preenche linhas
+        for rec in records:
+
+            time = fmt_dt(rec.get("datetime_actual"))
+            last_loc = fmt_dt(rec.get("datetime_utc"))
+
+            reason_code = rec.get("reason")
+            reason_txt = REASON_MAP.get(reason_code, f"Código {reason_code}")
+
+            speed = rec.get("speed", "0")
+            heading = rec.get("heading", "0")
+            gps = rec.get("gps", "Off")
+
+            installed = "Yes" if rec.get("installed") else "No"
+            button = "Pressed" if rec.get("button") else "Off"
+
+            door = "Opened" if rec.get("door") == 1 else "Closed"
+
+            voltage = rec.get("main_voltage")
+            if voltage:
+                try:
+                    v = float(voltage)
+                    bat_pct = int((v - 3.5) / (4.17 - 3.5) * 100)
+                    bat_pct = max(0, min(100, bat_pct))
+                    main_power = f"{bat_pct}%"
+                except:
+                    main_power = str(voltage)
+            else:
+                main_power = "N/A"
+
+            light = rec.get("light", "Off")
+            temp = rec.get("temperature", "N/A")
+
+            address = rec.get("address", "-")
+
+            lon = rec.get("longitude", "")
+            lat = rec.get("latitude", "")
+
+            row = [
+                time,
+                last_loc,
+                str(gps),
+                installed,
+                button,
+                door,
+                main_power,
+                str(light),
+                str(temp),
+                str(lon),
+                str(lat),
+            ]
+
+            table_data.append(row)
+
+        # -------------------------
+        # MONTAGEM VISUAL DA TABELA
+        # -------------------------
+
+        table = Table(
+        table_data,
+        repeatRows=1,
+        colWidths=[
+        90,   # Time
+        100,  # Last Location
+        40,   # GPS
+        60,   # Installed
+        60,   # Button
+        60,   # Door
+        70,   # Main Power
+        50,   # Light
+        70,   # Temperature
+        80,   # Longitude
+        80,   # Latitude
+            ]
+        )
+
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#D4AF37")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, 0), 8),
+
+            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 1), (-1, -1), 7),
+
+            ("GRID", (0, 0), (-1, -1), 0.25, colors.grey),
+
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+
+            ("LEFTPADDING", (0, 0), (-1, -1), 2),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+            ("TOPPADDING", (0, 0), (-1, -1), 2),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ]))
+
+        elements.append(table)
+
+        # Gera PDF
         doc.build(elements)
         buf.seek(0)
-        pdf = buf.getvalue()
-
-        response = HttpResponse(pdf, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="historico_{unit}.pdf"'
-        return response
+        return download_pdf(buf, unit)
 
     except json.JSONDecodeError:
         return HttpResponse('JSON inválido.', status=400)
+
     except requests.RequestException as e:
         return HttpResponse(f'Erro na API T42: {e}', status=502)
+
     except Exception as e:
         return HttpResponse(f'Erro interno: {e}', status=500)
+
+
+def download_pdf(buffer, unit):
+    pdf = buffer.getvalue()
+    buffer.close()
+    response = HttpResponse(pdf, content_type="application/pdf")
+    response['Content-Disposition'] = f'attachment; filename="historico_{unit}.pdf"'
+    return response
